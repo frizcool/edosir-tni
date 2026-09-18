@@ -1,0 +1,4 @@
+# Keamanan E-DOSIR TNI AD: Blokir seluruh akses HTTP publik langsung
+# Berkas hanya dapat diakses melalui controller aman view_file.php
+Require all denied
+Options -Indexes

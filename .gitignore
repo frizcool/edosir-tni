@@ -1,0 +1,21 @@
+# Berkas sensitif & upload dinamis (privasi data prajurit)
+uploads/*
+!uploads/.htaccess
+!uploads/.gitkeep
+!uploads/raw/
+!uploads/raw/.gitkeep
+!uploads/foto_profil/
+!uploads/foto_profil/.gitkeep
+
+# Cadangan database & file ekspor
+backups/*
+!backups/.gitkeep
+exports/*
+!exports/.gitkeep
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

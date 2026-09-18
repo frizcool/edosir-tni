@@ -1,0 +1,9 @@
+{
+    "name": "tniad/edosir",
+    "description": "E-Dosir TNI AD - Sistem Dosir Elektronik Personel",
+    "require": {
+        "php": ">=8.0",
+        "setasign/fpdi": "^2.6",
+        "tecnickcom/tcpdf": "^6.6"
+    }
+}

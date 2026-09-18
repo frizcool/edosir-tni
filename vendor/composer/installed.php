@@ -1,0 +1,41 @@
+<?php return array(
+    'root' => array(
+        'name' => 'tniad/edosir',
+        'pretty_version' => '1.0.0+no-version-set',
+        'version' => '1.0.0.0',
+        'reference' => null,
+        'type' => 'library',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => false,
+    ),
+    'versions' => array(
+        'setasign/fpdi' => array(
+            'pretty_version' => 'v2.6.8',
+            'version' => '2.6.8.0',
+            'reference' => '881945be29a4996ad3d008eb18ddc01fa3df890c',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../setasign/fpdi',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'tecnickcom/tcpdf' => array(
+            'pretty_version' => '6.11.4',
+            'version' => '6.11.4.0',
+            'reference' => 'fbbaf14cfae8fe646f154f7c530d15ec25764040',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../tecnickcom/tcpdf',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'tniad/edosir' => array(
+            'pretty_version' => '1.0.0+no-version-set',
+            'version' => '1.0.0.0',
+            'reference' => null,
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+    ),
+);

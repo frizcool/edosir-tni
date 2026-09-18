@@ -1,0 +1,26 @@
+# =====================================================================
+# PENGAMANAN APLIKASI E-DOSIR TNI AD
+# Mencegah Directory Browsing, Information Disclosure & Direct File Access
+# =====================================================================
+
+# 1. Matikan Directory Listing di seluruh tingkatan direktori
+Options -Indexes
+
+# 2. Blokir Akses ke Berkas Sensitif & Konfigurasi
+<FilesMatch "^(composer\.(json|lock)|\.git.*|\.env.*|.*\.sql|.*\.md|.*\.log|.*\.bak|.*\.tmp)$">
+    Require all denied
+</FilesMatch>
+
+# 3. Blokir Akses Langsung ke Folder Konfigurasi, SQL & Pustaka Internal
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(config|sql|vendor)/ - [F,L]
+</IfModule>
+
+# 4. HTTP Security Headers
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
