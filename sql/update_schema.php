@@ -41,4 +41,7 @@ $pdo->exec("
 ");
 echo "Tabel login_attempts siap.\n";
 
+// 3. Pastikan relasi natural & foreign keys terpasang
+require_once __DIR__ . '/migrate_natural_relations.php';
+
 echo "Migrasi database selesai sukses!\n";

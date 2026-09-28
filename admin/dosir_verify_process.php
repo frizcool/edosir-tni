@@ -57,7 +57,7 @@ if ($action === 'approved') {
     // 2. Generate Nomor Registrasi TTE Unik & Hash Dokumen
     $yearMonth = date('Ym');
     $randToken = strtoupper(substr(md5(uniqid((string)$id, true)), 0, 6));
-    $signatureCode = "TTE-TNIAD-{$yearMonth}-{$id}-{$randToken}";
+    $signatureCode = "TTE-TRISULA-{$yearMonth}-{$id}-{$randToken}";
     $docHash = file_exists($rawMasterPath) ? hash_file('sha256', $rawMasterPath) : '';
 
     // URL Verifikasi Publik untuk QR Code
@@ -92,6 +92,9 @@ if ($action === 'approved') {
         @touch($outputPath); // Segarkan timestamp file agar cache browser langsung ganti
     }
 
+    // Hitung hash integritas dokumen akhir yang telah dibubuhi TTE
+    $signedHash = file_exists($outputPath) ? hash_file('sha256', $outputPath) : $docHash;
+
     $upd = $pdo->prepare("
         UPDATE dosir_files 
         SET status = 'approved', 
@@ -100,10 +103,11 @@ if ($action === 'approved') {
             verified_at = NOW(),
             is_watermarked = 0,
             signature_code = ?,
-            signature_hash = ?
+            signature_hash = ?,
+            raw_hash = ?
         WHERE id = ?
     ");
-    $upd->execute([$catatan !== '' ? $catatan : null, $admin['id'], $signatureCode, $docHash, $id]);
+    $upd->execute([$catatan !== '' ? $catatan : null, $admin['id'], $signatureCode, $signedHash, $docHash, $id]);
 
     set_flash('success', "Berkas disetujui! Watermark 'BELUM TERVERIFIKASI' telah dihilangkan dan digantikan Sertifikasi Tanda Tangan Elektronik (TTE: $signatureCode).");
 } else {

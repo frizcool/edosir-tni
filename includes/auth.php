@@ -12,9 +12,34 @@ function is_logged_in() {
 }
 
 function require_login() {
+    global $pdo;
     if (!is_logged_in()) {
         redirect('/login.php');
     }
+
+    // Proteksi Batas Waktu Ketidakaktifan Sesi (Session Idle Timeout)
+    $timeoutMins = 30;
+    if (isset($pdo)) {
+        $settingMins = (int) get_setting($pdo, 'session_timeout_minutes', 30);
+        if ($settingMins > 0) $timeoutMins = $settingMins;
+    }
+    $timeoutSeconds = $timeoutMins * 60;
+
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeoutSeconds)) {
+        $timedOutUser = $_SESSION['user']['id'] ?? null;
+        if ($timedOutUser && isset($pdo)) {
+            log_activity($pdo, $timedOutUser, 'SESSION_TIMEOUT', 'Sesi berakhir otomatis karena tidak aktif selama ' . $timeoutMins . ' menit');
+        }
+        unset($_SESSION['user']);
+        session_destroy();
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        set_flash('error', 'Sesi Anda telah berakhir otomatis demi keamanan sistem militer. Silakan masuk kembali.');
+        redirect('/login.php');
+    }
+
+    $_SESSION['last_activity'] = time();
 }
 
 function require_role($role) {
@@ -71,6 +96,7 @@ function do_login($pdo, $username, $password, &$error) {
 
     unset($user['password']);
     $_SESSION['user'] = $user;
+    $_SESSION['last_activity'] = time();
 
     $upd = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
     $upd->execute([$user['id']]);

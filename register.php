@@ -40,11 +40,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         } else {
             $pdo->beginTransaction();
             try {
+                $tmt_pensiun_proyeksi = hitung_proyeksi_pensiun($tanggal_lahir, $golongan);
                 $stmt = $pdo->prepare(
-                    "INSERT INTO personel (nrp, nama, golongan, pangkat, korp, satuan, kotama, jabatan, tmt_jabatan, tmt_pangkat, tempat_lahir, tanggal_lahir, jenis_kelamin)
-                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                    "INSERT INTO personel (nrp, nama, golongan, pangkat, korp, satuan, kotama, jabatan, tmt_jabatan, tmt_pangkat, tempat_lahir, tanggal_lahir, jenis_kelamin, tmt_pensiun_proyeksi)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                 );
-                $stmt->execute([$nrp, $nama, $golongan, $pangkat, $korp, $satuan, $kotama, $jabatan, $tmt_jabatan, $tmt_pangkat, $tempat_lahir, $tanggal_lahir, $jenis_kelamin]);
+                $stmt->execute([$nrp, $nama, $golongan, $pangkat, $korp, $satuan, $kotama, $jabatan, $tmt_jabatan, $tmt_pangkat, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $tmt_pensiun_proyeksi]);
                 $personel_id = (int)$pdo->lastInsertId();
 
                 // Otomatis buatkan akun user: username = NRP, password = hash(NRP), status = pending

@@ -1,9 +1,10 @@
 {
     "name": "tniad/edosir",
-    "description": "E-Dosir TNI AD - Sistem Dosir Elektronik Personel",
+    "description": "TRISULA TNI AD - Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip",
     "require": {
         "php": ">=8.0",
         "setasign/fpdi": "^2.6",
-        "tecnickcom/tcpdf": "^6.6"
+        "tecnickcom/tcpdf": "^6.6",
+        "phpoffice/phpword": "^1.4"
     }
 }

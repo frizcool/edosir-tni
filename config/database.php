@@ -21,5 +21,5 @@ try {
 } catch (PDOException $e) {
     error_log('Database Connection Error: ' . $e->getMessage());
     http_response_code(500);
-    die('Terjadi gangguan koneksi ke pangkalan data sistem E-DOSIR TNI AD. Silakan hubungi Administrator Satuan / IT Support.');
+    die('Terjadi gangguan koneksi ke pangkalan data sistem TRISULA TNI AD. Silakan hubungi Administrator Satuan / IT Support.');
 }

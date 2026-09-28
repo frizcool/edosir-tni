@@ -44,7 +44,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 if (in_array($ext, $allowedExts, true) && $f['size'] <= $maxLogoSize) {
                     if ($ext === 'svg') {
                         $svgContent = file_get_contents($f['tmp_name']);
-                        if (strpos($svgContent, '<svg') !== false && stripos($svgContent, '<script') === false) {
+                        $dangerous = ['<script', 'javascript:', '<foreignobject', 'onload', 'onerror', 'onclick', 'onmouseover', '<iframe', '<embed', '<object'];
+                        $isMalicious = false;
+                        foreach ($dangerous as $badWord) {
+                            if (stripos($svgContent, $badWord) !== false) {
+                                $isMalicious = true;
+                                break;
+                            }
+                        }
+                        if (strpos($svgContent, '<svg') !== false && !$isMalicious) {
                             $valid = true;
                         }
                     } else {
@@ -73,17 +81,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                         $error = 'Gagal menyimpan berkas logo di server.';
                     }
                 } else {
-                    $error = 'Berkas logo tidak valid. Harap gunakan format PNG, JPG, WEBP, atau SVG asli (maks 3 MB).';
+                    $error = 'Berkas logo tidak valid atau mengandung elemen skrip tidak aman. Harap gunakan format PNG, JPG, WEBP, atau SVG bersih (maks 3 MB).';
                 }
             }
 
+            $pejabatNama    = trim($_POST['pejabat_nama'] ?? '');
+            $pejabatPangkat = trim($_POST['pejabat_pangkat'] ?? '');
+            $pejabatNrp     = trim($_POST['pejabat_nrp'] ?? '');
+            $pejabatJabatan = trim($_POST['pejabat_jabatan'] ?? '');
+            $sessionTimeout = max(5, (int)($_POST['session_timeout_minutes'] ?? 30));
+
             update_setting($pdo, 'app_name', $appName, 'general');
             update_setting($pdo, 'app_subtitle', $appSubtitle, 'general');
-            update_setting($pdo, 'app_brand_title', $appBrandTitle ?: 'E-DOSIR', 'general');
+            update_setting($pdo, 'app_brand_title', $appBrandTitle ?: 'TRISULA', 'general');
             update_setting($pdo, 'app_brand_sub', $appBrandSub ?: 'TNI AD', 'general');
             update_setting($pdo, 'instansi', $instansi ?: 'TNI Angkatan Darat', 'general');
             update_setting($pdo, 'batas_tahun_jabatan', (string)$batasJabatan, 'dosir');
             update_setting($pdo, 'watermark_text', $watermarkText ?: 'BELUM TERVERIFIKASI', 'dosir');
+            update_setting($pdo, 'pejabat_nama', $pejabatNama, 'laporan');
+            update_setting($pdo, 'pejabat_pangkat', $pejabatPangkat, 'laporan');
+            update_setting($pdo, 'pejabat_nrp', $pejabatNrp, 'laporan');
+            update_setting($pdo, 'pejabat_jabatan', $pejabatJabatan, 'laporan');
+            update_setting($pdo, 'session_timeout_minutes', (string)$sessionTimeout, 'security');
 
             if (!$error) {
                 log_activity($pdo, $admin['id'], 'UPDATE_SETTINGS', "Memperbarui pengaturan aplikasi (Judul: $appName)");
@@ -122,13 +141,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 }
 
 // Ambil nilai pengaturan terkini
-$currAppName        = get_setting($pdo, 'app_name', 'E-DOSIR TNI AD');
-$currAppSubtitle    = get_setting($pdo, 'app_subtitle', 'Sistem Dosir Elektronik Personel');
-$currAppBrandTitle  = get_setting($pdo, 'app_brand_title', 'E-DOSIR');
+$currAppName        = get_setting($pdo, 'app_name', 'TRISULA TNI AD');
+$currAppSubtitle    = get_setting($pdo, 'app_subtitle', 'Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip');
+$currAppBrandTitle  = get_setting($pdo, 'app_brand_title', 'TRISULA');
 $currAppBrandSub    = get_setting($pdo, 'app_brand_sub', 'TNI AD');
 $currInstansi       = get_setting($pdo, 'instansi', 'TNI Angkatan Darat');
 $currBatasJabatan   = get_setting($pdo, 'batas_tahun_jabatan', '2');
 $currWatermarkText  = get_setting($pdo, 'watermark_text', 'BELUM TERVERIFIKASI');
+$currPejabatNama    = get_setting($pdo, 'pejabat_nama', 'HENDRA PRATAMA, S.I.P.');
+$currPejabatPangkat = get_setting($pdo, 'pejabat_pangkat', 'MAYOR INF');
+$currPejabatNrp     = get_setting($pdo, 'pejabat_nrp', '11040023450682');
+$currPejabatJabatan = get_setting($pdo, 'pejabat_jabatan', 'Perwira Personel / Verifikator');
+$currSessionTimeout = get_setting($pdo, 'session_timeout_minutes', '30');
 $currAppLogoUrl     = app_logo_url();
 
 $pageTitle = 'Pengaturan Aplikasi';
@@ -196,7 +220,7 @@ include __DIR__ . '/../includes/header.php';
 
       <div style="margin-bottom:16px;">
         <label style="font-weight:600;">Judul Utama Aplikasi (App Title) *</label>
-        <input type="text" name="app_name" value="<?= htmlspecialchars($currAppName) ?>" required placeholder="Contoh: E-DOSIR TNI AD / E-DOSIR KODAM" autofocus>
+        <input type="text" name="app_name" value="<?= htmlspecialchars($currAppName) ?>" required placeholder="Contoh: TRISULA TNI AD / TRISULA KODAM" autofocus>
         <span style="font-size:11.5px;color:var(--text-dim);display:block;margin-top:4px;">
           Ditampilkan di tab browser, halaman login, kop laporan, dan banner pusat komando.
         </span>
@@ -204,7 +228,7 @@ include __DIR__ . '/../includes/header.php';
 
       <div style="margin-bottom:16px;">
         <label style="font-weight:600;">Sub-Judul Aplikasi</label>
-        <input type="text" name="app_subtitle" value="<?= htmlspecialchars($currAppSubtitle) ?>" placeholder="Contoh: Sistem Dosir Elektronik Personel">
+        <input type="text" name="app_subtitle" value="<?= htmlspecialchars($currAppSubtitle) ?>" placeholder="Contoh: Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip">
         <span style="font-size:11.5px;color:var(--text-dim);display:block;margin-top:4px;">
           Ditampilkan di bawah judul login dan footer sistem.
         </span>
@@ -213,7 +237,7 @@ include __DIR__ . '/../includes/header.php';
       <div class="grid grid-2" style="margin-bottom:16px;">
         <div>
           <label style="font-weight:600;">Brand Sidebar Atas</label>
-          <input type="text" name="app_brand_title" value="<?= htmlspecialchars($currAppBrandTitle) ?>" placeholder="E-DOSIR" required>
+          <input type="text" name="app_brand_title" value="<?= htmlspecialchars($currAppBrandTitle) ?>" placeholder="TRISULA" required>
         </div>
         <div>
           <label style="font-weight:600;">Brand Sidebar Bawah</label>
@@ -243,6 +267,42 @@ include __DIR__ . '/../includes/header.php';
             <input type="text" name="watermark_text" value="<?= htmlspecialchars($currWatermarkText) ?>" placeholder="BELUM TERVERIFIKASI">
             <span style="font-size:11px;color:var(--text-dim);">Cap diagonal pada berkas baru diunggah. Saat berkas disetujui/diapprove, watermark otomatis lenyap digantikan TTE resmi.</span>
           </div>
+        </div>
+      </div>
+
+      <div style="padding:14px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">
+        <strong style="font-size:13px;display:block;margin-bottom:10px;color:var(--gold);">✍️ Pejabat Penandatangan Laporan Kedinasan:</strong>
+        <div class="grid grid-2" style="margin-bottom:10px;">
+          <div>
+            <label style="font-size:12px;">Nama Lengkap Pejabat</label>
+            <input type="text" name="pejabat_nama" value="<?= htmlspecialchars($currPejabatNama) ?>" placeholder="cth: HENDRA PRATAMA, S.I.P.">
+          </div>
+          <div>
+            <label style="font-size:12px;">Pangkat / Korps</label>
+            <input type="text" name="pejabat_pangkat" value="<?= htmlspecialchars($currPejabatPangkat) ?>" placeholder="cth: MAYOR INF">
+          </div>
+        </div>
+        <div class="grid grid-2">
+          <div>
+            <label style="font-size:12px;">NRP Pejabat</label>
+            <input type="text" name="pejabat_nrp" value="<?= htmlspecialchars($currPejabatNrp) ?>" placeholder="cth: 11040023450682">
+          </div>
+          <div>
+            <label style="font-size:12px;">Jabatan Dinas</label>
+            <input type="text" name="pejabat_jabatan" value="<?= htmlspecialchars($currPejabatJabatan) ?>" placeholder="cth: Perwira Personel / Verifikator">
+          </div>
+        </div>
+        <span style="font-size:11px;color:var(--text-dim);display:block;margin-top:4px;">
+          Dicantumkan secara otomatis pada kolom tanda tangan lembar cetak laporan kedinasan.
+        </span>
+      </div>
+
+      <div style="padding:14px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">
+        <strong style="font-size:13px;display:block;margin-bottom:10px;color:var(--gold);">🔒 Keamanan Sesi Pengguna:</strong>
+        <div>
+          <label style="font-size:12px;">Batas Waktu Ketidakaktifan Sesi (Menit)</label>
+          <input type="number" name="session_timeout_minutes" value="<?= htmlspecialchars($currSessionTimeout) ?>" min="5" max="180" required>
+          <span style="font-size:11px;color:var(--text-dim);">Sesi otomatis ditutup bila tidak ada aktivitas pengguna demi melindungi kerahasiaan arsip militer (standar: 30 menit).</span>
         </div>
       </div>
 

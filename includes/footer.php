@@ -3,7 +3,7 @@
     </main>
     <footer class="footer">
       <div>
-        &copy; <?= date('Y') ?> <strong><?= htmlspecialchars(get_setting($pdo, 'app_name', APP_NAME)) ?></strong> &mdash; <?= htmlspecialchars(get_setting($pdo, 'app_subtitle', 'Sistem Dosir Elektronik Personel')) ?>
+        &copy; <?= date('Y') ?> <strong><?= htmlspecialchars(get_setting($pdo, 'app_name', APP_NAME)) ?></strong> &mdash; <?= htmlspecialchars(get_setting($pdo, 'app_subtitle', 'Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip')) ?>
       </div>
       <div>
         Craft by <strong style="color:var(--gold);">Letda Czi Fris Wardani</strong>

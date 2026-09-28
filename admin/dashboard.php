@@ -97,26 +97,46 @@ $recentLogs = $pdo->query("
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// --- 6. PREDIKSI PENSIUN & ROTASI JABATAN ---
-$personelList = $pdo->query("SELECT * FROM personel WHERE status_dinas='Aktif'")->fetchAll();
+// --- 6. PREDIKSI PENSIUN & ROTASI JABATAN (OPTIMASI QUERY SQL TERINDEX) ---
+$stmtPensiun = $pdo->prepare("
+    SELECT p.*, p.tmt_pensiun_proyeksi as tgl_pensiun,
+           TIMESTAMPDIFF(MONTH, CURDATE(), p.tmt_pensiun_proyeksi) as sisa_bulan
+    FROM personel p
+    WHERE p.status_dinas = 'Aktif'
+      AND p.tmt_pensiun_proyeksi IS NOT NULL
+      AND p.tmt_pensiun_proyeksi <= DATE_ADD(CURDATE(), INTERVAL 24 MONTH)
+    ORDER BY p.tmt_pensiun_proyeksi ASC
+    LIMIT 20
+");
+$stmtPensiun->execute();
 $pensiunSoon = [];
-foreach ($personelList as $p) {
-    $tglPensiun = prediksi_pensiun($p['golongan'], $p['tanggal_lahir']);
-    $sisaBulan = bulan_menuju_pensiun($tglPensiun);
-    if ($sisaBulan !== null && $sisaBulan <= 24) {
-        $pensiunSoon[] = ['p' => $p, 'tgl' => $tglPensiun, 'sisa' => $sisaBulan];
-    }
+foreach ($stmtPensiun->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $pensiunSoon[] = [
+        'p'    => $row,
+        'tgl'  => $row['tgl_pensiun'],
+        'sisa' => max(0, (int)$row['sisa_bulan'])
+    ];
 }
-usort($pensiunSoon, fn($a, $b) => $a['sisa'] <=> $b['sisa']);
 
+$batasTahun = BATAS_TAHUN_JABATAN;
+$stmtJabatan = $pdo->prepare("
+    SELECT p.*, 
+           ROUND(DATEDIFF(CURDATE(), p.tmt_jabatan) / 365.25, 1) as lama_tahun
+    FROM personel p
+    WHERE p.status_dinas = 'Aktif'
+      AND p.tmt_jabatan IS NOT NULL
+      AND p.tmt_jabatan <= DATE_SUB(CURDATE(), INTERVAL ? YEAR)
+    ORDER BY p.tmt_jabatan ASC
+    LIMIT 20
+");
+$stmtJabatan->execute([$batasTahun]);
 $jabatanLama = [];
-foreach ($personelList as $p) {
-    $lama = lama_jabatan_tahun($p['tmt_jabatan']);
-    if ($lama !== null && $lama > BATAS_TAHUN_JABATAN) {
-        $jabatanLama[] = ['p' => $p, 'lama' => $lama];
-    }
+foreach ($stmtJabatan->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $jabatanLama[] = [
+        'p'    => $row,
+        'lama' => (float)$row['lama_tahun']
+    ];
 }
-usort($jabatanLama, fn($a, $b) => $b['lama'] <=> $a['lama']);
 
 // Info backup terakhir
 $lastBackup = $pdo->query("SELECT created_at, jenis, file_name FROM backup_log ORDER BY created_at DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);

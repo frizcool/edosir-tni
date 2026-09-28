@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="3.0">
+    <attributes>
+        <attribute name="name" value="Modul Persetujuan Akun Personel TRISULA TNI AD"/>
+        <attribute name="authors" value="Letda Czi Fris Wardani"/>
+        <attribute name="about" value="Diagram alur verifikasi dan persetujuan (approval/reject) akun pendaftaran prajurit baru oleh Administrator Satuan guna mencegah akses tidak sah dan menjaga integritas pangkalan data"/>
+        <attribute name="saved" value="2026-09-22 03:50:00 PM"/>
+        <attribute name="created" value="2026-09-22 03:25:00 PM"/>
+        <attribute name="edited" value="2026-09-22 03:50:00 PM"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="adminId" type="String" array="False" size=""/>
+            <declare name="userId" type="Integer" array="False" size=""/>
+            <declare name="nrpPendaftar" type="String" array="False" size=""/>
+            <declare name="namaPendaftar" type="String" array="False" size=""/>
+            <declare name="pangkat" type="String" array="False" size=""/>
+            <declare name="satuanPendaftar" type="String" array="False" size=""/>
+            <declare name="isOrganikValid" type="Boolean" array="False" size=""/>
+            <declare name="keputusanAdmin" type="String" array="False" size=""/>
+            <declare name="catatanPenolakan" type="String" array="False" size=""/>
+            <declare name="inputOrganik" type="String" array="False" size=""/>
+
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+            <output expression="&quot;   MODUL PERSETUJUAN (APPROVAL) AKUN PRAJURIT BARU OLEH ADMIN    &quot;" newline="True"/>
+            <output expression="&quot;                    SISTEM TRISULA TNI AD&quot;" newline="True"/>
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+
+            <output expression="&quot;Petugas Administrator Satuan:&quot;" newline="True"/>
+            <input variable="adminId"/>
+            <output expression="&quot;Memuat daftar antrean akun dengan status PENDING...&quot;" newline="True"/>
+
+            <output expression="&quot;Pilih ID Pengguna yang Ingin Diverifikasi:&quot;" newline="True"/>
+            <input variable="userId"/>
+
+            <assign variable="nrpPendaftar" expression="&quot;31050123450986&quot;"/>
+            <assign variable="namaPendaftar" expression="&quot;Serda Hendro Prasetyo&quot;"/>
+            <assign variable="pangkat" expression="&quot;Serda&quot;"/>
+            <assign variable="satuanPendaftar" expression="&quot;Denzibang 3/I Medan&quot;"/>
+
+            <output expression="&quot;Data Pengajuan Akun:&quot;" newline="True"/>
+            <output expression="&quot;Nama: &quot; &amp; namaPendaftar &amp; &quot; | Pangkat: &quot; &amp; pangkat" newline="True"/>
+            <output expression="&quot;NRP : &quot; &amp; nrpPendaftar &amp; &quot; | Satuan: &quot; &amp; satuanPendaftar" newline="True"/>
+            <output expression="&quot;-----------------------------------------------------------------&quot;" newline="True"/>
+
+            <comment text="Verifikasi silang dengan Buku Registrasi Nominatif Fisik Satuan"/>
+            <output expression="&quot;Apakah prajurit tersebut benar merupakan anggota organik resmi satuan Anda? (ya/tidak):&quot;" newline="True"/>
+            <input variable="inputOrganik"/>
+
+            <if expression="inputOrganik == &quot;ya&quot; || inputOrganik == &quot;YA&quot; || inputOrganik == &quot;y&quot;">
+                <then>
+                    <assign variable="isOrganikValid" expression="True"/>
+                </then>
+                <else>
+                    <assign variable="isOrganikValid" expression="False"/>
+                </else>
+            </if>
+
+            <if expression="!isOrganikValid">
+                <then>
+                    <output expression="&quot;PERINGATAN: Prajurit bukan anggota organik satuan terdaftar!&quot;" newline="True"/>
+                    <output expression="&quot;Tentukan Tindakan: 'reject' untuk Tolak, atau 'delete' untuk Hapus Akun Palsu:&quot;" newline="True"/>
+                    <input variable="keputusanAdmin"/>
+
+                    <if expression="keputusanAdmin == &quot;delete&quot; || keputusanAdmin == &quot;DELETE&quot;">
+                        <then>
+                            <output expression="&quot;Menghapus pendaftaran palsu dari tabel users dan personel...&quot;" newline="True"/>
+                            <output expression="&quot;AKUN DIHAPUS PERMANEN DARI SISTEM.&quot;" newline="True"/>
+                        </then>
+                        <else>
+                            <output expression="&quot;Masukkan alasan penolakan:&quot;" newline="True"/>
+                            <input variable="catatanPenolakan"/>
+                            <output expression="&quot;Memperbarui status pengguna: REJECTED (Akun terkunci).&quot;" newline="True"/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <comment text="Persetujuan dan Aktivasi Akun Prajurit"/>
+                    <output expression="&quot;Konfirmasi persetujuan akun prajurit: 'approve':&quot;" newline="True"/>
+                    <input variable="keputusanAdmin"/>
+
+                    <if expression="keputusanAdmin == &quot;approve&quot; || keputusanAdmin == &quot;APPROVE&quot;">
+                        <then>
+                            <output expression="&quot;Memperbarui tabel 'users' (status = 'approved', role = 'personel')...&quot;" newline="True"/>
+                            <output expression="&quot;Menghubungkan Foreign Key user_id dengan personel_id secara natural...&quot;" newline="True"/>
+                            <output expression="&quot;Mencatat aksi persetujuan oleh &quot; &amp; adminId &amp; &quot; ke tabel 'activity_log'...&quot;" newline="True"/>
+                            <output expression="&quot;=================================================================&quot;" newline="True"/>
+                            <output expression="&quot;AKUN PRAJURIT RESMI DISETUJUI &amp; DIAKTIFKAN!&quot;" newline="True"/>
+                            <output expression="&quot;Prajurit kini dapat masuk ke portal untuk mengunggah 33 berkas dosir.&quot;" newline="True"/>
+                            <output expression="&quot;=================================================================&quot;" newline="True"/>
+                        </then>
+                        <else>
+                            <output expression="&quot;Aksi dibatalkan. Akun tetap berstatus PENDING.&quot;" newline="True"/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+        </body>
+    </function>
+</flowgorithm>

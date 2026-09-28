@@ -229,13 +229,26 @@ function hitung_usia($tanggal_lahir, $pada = null) {
     return $lahir->diff($now)->y;
 }
 
-/** Prediksi tanggal pensiun berdasarkan golongan & tanggal lahir */
+/** Prediksi tanggal pensiun berdasarkan golongan & tanggal lahir (alias untuk hitung_proyeksi_pensiun) */
 function prediksi_pensiun($golongan, $tanggal_lahir) {
-    if (!$tanggal_lahir) return null;
-    $usia_pensiun = USIA_PENSIUN[$golongan] ?? 58;
-    $lahir = new DateTime($tanggal_lahir);
-    $lahir->modify('+' . $usia_pensiun . ' years');
-    return $lahir->format('Y-m-d');
+    return hitung_proyeksi_pensiun($tanggal_lahir, $golongan);
+}
+
+/**
+ * Menghitung Proyeksi Tanggal Pensiun Sesuai Golongan
+ * Standar Naskah Sekolah Disinfolahtad Nomor: 61 - A – 009
+ * Batas Usia Pensiun (BUP): Perwira 58 th, Bintara/Tamtama 56 th, PNS 60 th
+ */
+function hitung_proyeksi_pensiun(?string $tanggalLahir, string $golongan): ?string {
+    if (!$tanggalLahir) return null;
+    $usiaPensiun = USIA_PENSIUN[$golongan] ?? 56;
+    try {
+        $lahir = new DateTime($tanggalLahir);
+        $lahir->modify('+' . $usiaPensiun . ' years');
+        return $lahir->format('Y-m-d');
+    } catch (Exception $e) {
+        return null;
+    }
 }
 
 /** Sisa waktu (dalam bulan) menuju pensiun; negatif = sudah lewat */
@@ -255,6 +268,22 @@ function lama_jabatan_tahun($tmt_jabatan) {
     $now = new DateTime();
     $diff = $tmt->diff($now);
     return round($diff->y + ($diff->m / 12), 1);
+}
+
+/**
+ * Deteksi Masa Jabatan Melebihi Batas Tertentu (Baku: 2 Tahun)
+ * Mendukung Perencanaan Mutasi / Tour of Duty & Tour of Area (TOD/TOA)
+ */
+function is_jabatan_melebihi_batas(?string $tmtJabatan, int $batasTahun = 2): bool {
+    if (!$tmtJabatan) return false;
+    try {
+        $tmt = new DateTime($tmtJabatan);
+        $sekarang = new DateTime();
+        $interval = $tmt->diff($sekarang);
+        return ($interval->y >= $batasTahun && !$interval->invert);
+    } catch (Exception $e) {
+        return false;
+    }
 }
 
 /** Ambil daftar 33 master dosir */
@@ -398,5 +427,68 @@ function get_distinct_personel_field($pdo, $fieldName) {
         return [];
     }
 }
+
+/**
+ * Pembersihan otomatis berkas arsip unduh massal yang telah usang di direktori exports/
+ * Menjaga efisiensi kapasitas media penyimpanan server (Garbage Collection)
+ */
+function cleanup_expired_exports($maxAgeSeconds = 86400) {
+    if (!defined('EXPORT_DIR') || !is_dir(EXPORT_DIR)) return;
+    try {
+        $now = time();
+        $files = scandir(EXPORT_DIR);
+        foreach ($files as $f) {
+            if ($f === '.' || $f === '..' || $f === '.gitignore') continue;
+            $path = EXPORT_DIR . '/' . $f;
+            if (is_file($path) && ($now - filemtime($path) > $maxAgeSeconds)) {
+                @unlink($path);
+            }
+        }
+    } catch (Exception $e) {
+        // Abaikan kegagalan I/O minor
+    }
+}
+
+/**
+ * Mengambil jumlah lencana (badge counters) untuk notifikasi menu navigasi
+ */
+function get_system_badge_counts($pdo, $user = null) {
+    static $badges = null;
+    if ($badges !== null) return $badges;
+
+    $badges = [
+        'pending_users'    => 0,
+        'pending_dosirs'   => 0,
+        'rejected_dosirs'  => 0,
+    ];
+
+    if (!$pdo) return $badges;
+
+    try {
+        if (!$user) {
+            $user = $_SESSION['user'] ?? null;
+        }
+
+        if ($user && $user['role'] === 'admin') {
+            $badges['pending_users'] = (int)$pdo->query(
+                "SELECT COUNT(*) FROM users WHERE status='pending' AND role='personel'"
+            )->fetchColumn();
+
+            $badges['pending_dosirs'] = (int)$pdo->query(
+                "SELECT COUNT(*) FROM dosir_files WHERE status='pending'"
+            )->fetchColumn();
+        } elseif ($user && $user['role'] === 'personel' && !empty($user['personel_id'])) {
+            $stmt = $pdo->prepare(
+                "SELECT COUNT(*) FROM dosir_files WHERE personel_id=? AND status='rejected'"
+            );
+            $stmt->execute([$user['personel_id']]);
+            $badges['rejected_dosirs'] = (int)$stmt->fetchColumn();
+        }
+    } catch (Exception $e) {
+    }
+
+    return $badges;
+}
+
 
 

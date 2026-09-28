@@ -70,7 +70,7 @@ function apply_unverified_watermark($inputPath, $outputPath, $metaLabel = '', $w
             $pdf->SetTextColor(130, 60, 50);
             $pdf->SetFont('helvetica', '', 7);
             $pdf->SetXY(5, $h - 7);
-            $footerText = 'E-DOSIR TNI AD — Status: Pending Approval. Menunggu persetujuan Administrator Satuan.' . ($metaLabel ? ' (' . $metaLabel . ')' : '');
+            $footerText = 'TRISULA TNI AD — Status: Pending Approval. Menunggu persetujuan Administrator Satuan.' . ($metaLabel ? ' (' . $metaLabel . ')' : '');
             $pdf->Cell($w - 10, 5, $footerText, 0, 0, 'L');
         }
 
@@ -143,7 +143,7 @@ function apply_digital_signature_pdf($rawMasterPath, $outputPath, array $signDat
             $pdf->SetAlpha(1.0);
             $pdf->SetFont('helvetica', '', 6.5);
             $pdf->SetTextColor(70, 95, 75); // Hijau tentara tenang
-            $runningLine = "★ E-DOSIR TNI AD — DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: $code | HASH: $shortHash | $signDate WIB";
+            $runningLine = "★ TRISULA TNI AD — DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: $code | HASH: $shortHash | $signDate WIB";
             $pdf->SetXY(6, $h - 6.5);
             $pdf->Cell($w - 12, 4, $runningLine, 0, 0, 'L');
 
@@ -229,7 +229,7 @@ function apply_digital_signature_pdf($rawMasterPath, $outputPath, array $signDat
                 $pdf->SetFont('helvetica', 'I', 4.8);
                 $pdf->SetTextColor(110, 125, 115);
                 $pdf->SetXY($boxX + 3, $boxY + $boxH - 3.8);
-                $pdf->Cell($boxW - 6, 3, 'Scan QR Code untuk memverifikasi keabsahan dokumen di Portal E-DOSIR', 0, 0, 'C');
+                $pdf->Cell($boxW - 6, 3, 'Scan QR Code untuk memverifikasi keabsahan dokumen di Portal TRISULA', 0, 0, 'C');
             }
         }
 

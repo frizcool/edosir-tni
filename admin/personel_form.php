@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'status_kawin' => trim($_POST['status_kawin']), 'alamat' => trim($_POST['alamat']),
         'no_hp' => trim($_POST['no_hp']), 'email' => trim($_POST['email']),
         'status_dinas' => $_POST['status_dinas'],
+        'tmt_pensiun_proyeksi' => hitung_proyeksi_pensiun($_POST['tanggal_lahir'] ?: null, $_POST['golongan'] ?? 'Perwira'),
     ];
 
     $statusAkun = $_POST['status_akun'] ?? 'approved';

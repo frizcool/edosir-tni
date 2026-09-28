@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="3.0">
+    <attributes>
+        <attribute name="name" value="Modul Jejak Audit Keamanan Sistem TRISULA TNI AD"/>
+        <attribute name="authors" value="Letda Czi Fris Wardani"/>
+        <attribute name="about" value="Diagram alur perekaman log audit keamanan (security audit trail), pemantauan anomali akses, pencegahan brute-force, dan pencatatan riwayat dokumen ke tabel activity_log"/>
+        <attribute name="saved" value="2026-09-22 03:55:00 PM"/>
+        <attribute name="created" value="2026-09-22 03:30:00 PM"/>
+        <attribute name="edited" value="2026-09-22 03:55:00 PM"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="userId" type="Integer" array="False" size=""/>
+            <declare name="ipAddress" type="String" array="False" size=""/>
+            <declare name="jenisAksi" type="String" array="False" size=""/>
+            <declare name="deskripsiLog" type="String" array="False" size=""/>
+            <declare name="statusAksi" type="String" array="False" size=""/>
+            <declare name="gagalLoginBeruntun" type="Integer" array="False" size=""/>
+            <declare name="peringatanKeamanan" type="Boolean" array="False" size=""/>
+
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+            <output expression="&quot;      MODUL MONITORING JEJAK AUDIT KEAMANAN (SIEM AUDIT TRAIL)   &quot;" newline="True"/>
+            <output expression="&quot;                    SISTEM TRISULA TNI AD&quot;" newline="True"/>
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+
+            <output expression="&quot;Pilih Jenis Aktivitas Sistem yang Terdeteksi:&quot;" newline="True"/>
+            <output expression="&quot;1 = LOGIN_SUCCESS         2 = LOGIN_FAILED&quot;" newline="True"/>
+            <output expression="&quot;3 = UNGGAH_DOSIR          4 = VERIFIKASI_TTE&quot;" newline="True"/>
+            <output expression="&quot;5 = UNDUH_ARSIP_SAH       6 = BACKUP_DATABASE&quot;" newline="True"/>
+            
+            <declare name="pilihanMenu" type="Integer" array="False" size=""/>
+            <input variable="pilihanMenu"/>
+
+            <assign variable="userId" expression="101"/>
+            <assign variable="ipAddress" expression="&quot;192.168.1.45&quot;"/>
+
+            <if expression="pilihanMenu == 2">
+                <then>
+                    <assign variable="jenisAksi" expression="&quot;LOGIN_FAILED&quot;"/>
+                    <assign variable="statusAksi" expression="&quot;DITOLAK&quot;"/>
+                    <output expression="&quot;Masukkan jumlah kegagalan berturut-turut dari IP &quot; &amp; ipAddress &amp; &quot;:&quot;" newline="True"/>
+                    <input variable="gagalLoginBeruntun"/>
+
+                    <if expression="gagalLoginBeruntun &gt;= 5">
+                        <then>
+                            <assign variable="peringatanKeamanan" expression="True"/>
+                            <assign variable="deskripsiLog" expression="&quot;PERINGATAN: Terdeteksi upaya serangan brute-force (&quot; &amp; ToString(gagalLoginBeruntun) &amp; &quot;x gagal). IP diblokir sementara 15 menit.&quot;"/>
+                        </then>
+                        <else>
+                            <assign variable="peringatanKeamanan" expression="False"/>
+                            <assign variable="deskripsiLog" expression="&quot;Percobaan login gagal karena kata sandi tidak cocok.&quot;"/>
+                        </else>
+                    </if>
+                </then>
+                <else>
+                    <assign variable="peringatanKeamanan" expression="False"/>
+                    <assign variable="statusAksi" expression="&quot;SUKSES&quot;"/>
+                    <if expression="pilihanMenu == 4">
+                        <then>
+                            <assign variable="jenisAksi" expression="&quot;VERIFIKASI_TTE&quot;"/>
+                            <assign variable="deskripsiLog" expression="&quot;Staf Personel mengesahkan berkas ID 42 dengan stempel TTE dan QR Code resmi.&quot;"/>
+                        </then>
+                        <else>
+                            <if expression="pilihanMenu == 3">
+                                <then>
+                                    <assign variable="jenisAksi" expression="&quot;UNGGAH_DOSIR&quot;"/>
+                                    <assign variable="deskripsiLog" expression="&quot;Prajurit mengunggah berkas pada Slot 05 (SK Pangkat).&quot;"/>
+                                </then>
+                                <else>
+                                    <assign variable="jenisAksi" expression="&quot;AKSI_UMUM_PORTAL&quot;"/>
+                                    <assign variable="deskripsiLog" expression="&quot;Operasi reguler pengguna terotentikasi.&quot;"/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </else>
+            </if>
+
+            <comment text="Perekaman Permanen (Immutable Insert) ke Tabel Database activity_log"/>
+            <output expression="&quot;Menyimpan log ke database: INSERT INTO activity_log (user_id, aktivitas, ip_address, created_at)...&quot;" newline="True"/>
+            <output expression="&quot;Waktu Kejadian : 2026-09-22 15:35:10 WIB&quot;" newline="True"/>
+            <output expression="&quot;Alamat IP Asal : &quot; &amp; ipAddress" newline="True"/>
+            <output expression="&quot;Jenis Aksi     : &quot; &amp; jenisAksi &amp; &quot; [&quot; &amp; statusAksi &amp; &quot;]&quot;" newline="True"/>
+            <output expression="&quot;Rincian Pesan  : &quot; &amp; deskripsiLog" newline="True"/>
+
+            <if expression="peringatanKeamanan">
+                <then>
+                    <output expression="&quot;[ALARM KEAMANAN DIPICU] Notifikasi darurat dikirimkan ke Telegram / Dasbor Komandan Satuan!&quot;" newline="True"/>
+                </then>
+                <else>
+                    <output expression="&quot;Aktivitas tercatat normal dalam log audit sistem.&quot;" newline="True"/>
+                </else>
+            </if>
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+        </body>
+    </function>
+</flowgorithm>

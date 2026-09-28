@@ -22,7 +22,7 @@ $pageTitle = $pageTitle ?? APP_NAME;
         <span class="brand-badge">★</span>
       <?php endif; ?>
       <div>
-        <div class="brand-title"><?= htmlspecialchars(get_setting($pdo, 'app_brand_title', 'E-DOSIR')) ?></div>
+        <div class="brand-title"><?= htmlspecialchars(get_setting($pdo, 'app_brand_title', 'TRISULA')) ?></div>
         <div class="brand-sub"><?= htmlspecialchars(get_setting($pdo, 'app_brand_sub', 'TNI AD')) ?></div>
       </div>
     </div>
@@ -30,17 +30,33 @@ $pageTitle = $pageTitle ?? APP_NAME;
       <?php 
       $currPath = $_SERVER['PHP_SELF'] ?? '';
       $isActive = fn($file) => strpos($currPath, $file) !== false ? ' active' : '';
+      $badges = get_system_badge_counts($pdo, $u);
       ?>
       <?php if ($u['role'] === 'personel'): ?>
-        <a href="<?= BASE_URL ?>/personel/dashboard.php" class="nav-link<?= $isActive('dashboard.php') ?>">Dashboard</a>
+        <a href="<?= BASE_URL ?>/personel/dashboard.php" class="nav-link<?= $isActive('dashboard.php') ?>" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Dashboard</span>
+          <?php if ($badges['rejected_dosirs'] > 0): ?>
+            <span class="badge badge-rejected" style="font-size:10px;padding:2px 6px;font-weight:700;"><?= $badges['rejected_dosirs'] ?> Revisi</span>
+          <?php endif; ?>
+        </a>
         <a href="<?= BASE_URL ?>/personel/upload.php" class="nav-link<?= $isActive('upload.php') ?>">Unggah Dosir</a>
         <a href="<?= BASE_URL ?>/personel/scan.php" class="nav-link<?= $isActive('scan.php') ?>">Scan Kamera</a>
         <a href="<?= BASE_URL ?>/personel/profile.php" class="nav-link<?= $isActive('profile.php') ?>">Profil Saya</a>
       <?php else: ?>
         <a href="<?= BASE_URL ?>/admin/dashboard.php" class="nav-link<?= $isActive('dashboard.php') ?>">Dashboard</a>
-        <a href="<?= BASE_URL ?>/admin/users_approve.php" class="nav-link<?= $isActive('users_approve.php') ?>">Approval Akun</a>
+        <a href="<?= BASE_URL ?>/admin/users_approve.php" class="nav-link<?= $isActive('users_approve.php') ?>" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Approval Akun</span>
+          <?php if ($badges['pending_users'] > 0): ?>
+            <span class="badge badge-pending" style="font-size:10px;padding:2px 6px;font-weight:700;"><?= $badges['pending_users'] ?></span>
+          <?php endif; ?>
+        </a>
         <a href="<?= BASE_URL ?>/admin/personel_list.php" class="nav-link<?= $isActive('personel_list.php') || $isActive('personel_detail.php') || $isActive('personel_form.php') ? ' active' : '' ?>">Data Personel</a>
-        <a href="<?= BASE_URL ?>/admin/dosir_verify.php" class="nav-link<?= $isActive('dosir_verify.php') ?>">Verifikasi Dosir</a>
+        <a href="<?= BASE_URL ?>/admin/dosir_verify.php" class="nav-link<?= $isActive('dosir_verify.php') ?>" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>Verifikasi Dosir</span>
+          <?php if ($badges['pending_dosirs'] > 0): ?>
+            <span class="badge badge-pending" style="font-size:10px;padding:2px 6px;font-weight:700;"><?= $badges['pending_dosirs'] ?></span>
+          <?php endif; ?>
+        </a>
         <a href="<?= BASE_URL ?>/admin/bulk_download.php" class="nav-link<?= $isActive('bulk_download.php') ?>">Unduh Massal</a>
         <a href="<?= BASE_URL ?>/admin/report.php" class="nav-link<?= $isActive('report.php') ?>">Laporan</a>
         <a href="<?= BASE_URL ?>/admin/dosir_master.php" class="nav-link<?= $isActive('dosir_master.php') ?>">Master Dosir</a>

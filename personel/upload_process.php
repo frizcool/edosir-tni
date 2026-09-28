@@ -78,17 +78,18 @@ if (!$watermarked) {
 
 $activeRelPath = $folder . '/' . $fileName;
 $rawRelPath    = 'raw/' . $folder . '/' . $fileName;
+$rawHash       = file_exists($rawPath) ? hash_file('sha256', $rawPath) : null;
 
 // 3. Simpan Catatan Berkas ke Basis Data (is_watermarked = 1 karena status masih pending)
 $ins = $pdo->prepare("
     INSERT INTO dosir_files (
         personel_id, dosir_kode, abjad, file_name, file_path, raw_file_path,
-        original_name, keterangan, status, is_watermarked, uploaded_by
-    ) VALUES (?,?,?,?,?,?,?,?,'pending',1,?)
+        original_name, keterangan, status, is_watermarked, raw_hash, uploaded_by
+    ) VALUES (?,?,?,?,?,?,?,?,'pending',1,?,?)
 ");
 $ins->execute([
     $personel_id, $kode, $abjad, $fileName, $activeRelPath, $rawRelPath,
-    $file['name'], $keterangan, $u['id']
+    $file['name'], $keterangan, $rawHash, $u['id']
 ]);
 
 log_activity($pdo, $u['id'], 'UPLOAD_DOSIR', "Unggah DOSIR $kode ($fileName) - Berkas berwatermark 'BELUM TERVERIFIKASI'");

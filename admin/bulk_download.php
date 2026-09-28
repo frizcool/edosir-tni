@@ -51,6 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     ensure_dir(EXPORT_DIR);
+    cleanup_expired_exports(); // Hapus berkas ekspor kadaluarsa (> 24 jam)
+    @set_time_limit(300);      // Berikan waktu proses cukup untuk arsip besar
+
     $zipName = 'dosir_export_' . date('Ymd_His') . '.zip';
     $zipPath = EXPORT_DIR . '/' . $zipName;
 

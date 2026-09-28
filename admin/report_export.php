@@ -38,6 +38,9 @@ header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 
+$filterPensiun = $_GET['filter_pensiun'] ?? 'all';
+$filterJabatan = $_GET['filter_jabatan'] ?? 'all';
+
 $out = fopen('php://output', 'w');
 // UTF-8 BOM untuk kompatibilitas sempurna Microsoft Excel di Windows
 fputs($out, "\xEF\xBB\xBF");
@@ -68,15 +71,21 @@ if ($jenis === 'kelengkapan') {
     fputcsv($out, ['No', 'NRP', 'Nama Lengkap', 'Golongan', 'Pangkat', 'Satuan', 'Tanggal Lahir', 'Usia Saat Ini', 'Proyeksi Tanggal Pensiun', 'Sisa Bulan', 'Keterangan']);
     $no = 1;
     foreach ($personelList as $p) {
-        $tglPensiun = prediksi_pensiun($p['golongan'], $p['tanggal_lahir']);
+        $tglPensiun = $p['tmt_pensiun_proyeksi'] ?: hitung_proyeksi_pensiun($p['tanggal_lahir'], $p['golongan']);
         $sisaBulan = bulan_menuju_pensiun($tglPensiun);
         $usia = hitung_usia($p['tanggal_lahir']);
+
+        if ($filterPensiun === '1th' && ($sisaBulan === null || $sisaBulan > 12)) continue;
+        if ($filterPensiun === '2th' && ($sisaBulan === null || $sisaBulan > 24)) continue;
+        if ($filterPensiun === '5th' && ($sisaBulan === null || $sisaBulan > 60)) continue;
         
         $ket = 'Normal';
         if ($sisaBulan !== null && $sisaBulan <= 0) {
             $ket = 'Sudah Memasuki Masa Pensiun';
         } elseif ($sisaBulan !== null && $sisaBulan <= 12) {
             $ket = 'Mendekati Pensiun (< 1 Tahun)';
+        } elseif ($sisaBulan !== null && $sisaBulan <= 24) {
+            $ket = 'Kandidat Pensiun (1-2 Tahun)';
         }
 
         fputcsv($out, [
@@ -98,6 +107,10 @@ if ($jenis === 'kelengkapan') {
     $no = 1;
     foreach ($personelList as $p) {
         $lama = lama_jabatan_tahun($p['tmt_jabatan']);
+
+        if ($filterJabatan === 'tod' && ($lama === null || $lama <= $batasJabatan)) continue;
+        if ($filterJabatan === '3th' && ($lama === null || $lama <= 3)) continue;
+
         $perluRotasi = ($lama !== null && $lama >= $batasJabatan) ? 'PERLU ROTASI / TOUR OF DUTY' : 'SESUAI MASA';
         fputcsv($out, [
             $no++,

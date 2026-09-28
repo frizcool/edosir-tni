@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="3.0">
+    <attributes>
+        <attribute name="name" value="Alur Utama Sistem TRISULA TNI AD"/>
+        <attribute name="authors" value="Letda Czi Fris Wardani"/>
+        <attribute name="about" value="Diagram alur induk (Master Flowchart) arsitektur sistem TRISULA TNI AD: Navigasi publik, autentikasi berbasis role (Admin vs Personel), orkestrasi 33 slot dosir, verifikasi TTE, validasi QR, dan intelijen karier"/>
+        <attribute name="saved" value="2026-09-22 03:00:00 PM"/>
+        <attribute name="created" value="2026-09-22 02:20:00 PM"/>
+        <attribute name="edited" value="2026-09-22 03:00:00 PM"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="menuUtama" type="Integer" array="False" size=""/>
+            <declare name="subRoleMenu" type="Integer" array="False" size=""/>
+            <declare name="isLoggedIn" type="Boolean" array="False" size=""/>
+            <declare name="currentUserRole" type="String" array="False" size=""/>
+            <declare name="isRunning" type="Boolean" array="False" size=""/>
+
+            <assign variable="isRunning" expression="True"/>
+            <assign variable="isLoggedIn" expression="False"/>
+            <assign variable="currentUserRole" expression="&quot;&quot;"/>
+
+            <while expression="isRunning">
+                <output expression="&quot;=========================================================================&quot;" newline="True"/>
+                <output expression="&quot;     SISTEM INFORMASI DOSIR ELEKTRONIK TRISULA TNI AD&quot;" newline="True"/>
+                <output expression="&quot;  (Tata Kelola Rekam Informasi, Sistematika, &amp; Unduhan Lengkap Arsip)&quot;" newline="True"/>
+                <output expression="&quot;=========================================================================&quot;" newline="True"/>
+
+                <if expression="!isLoggedIn">
+                    <then>
+                        <output expression="&quot;PILIHAN MENU UTAMA:&quot;" newline="True"/>
+                        <output expression="&quot;1. Masuk ke Portal (Login Prajurit / Administrator)&quot;" newline="True"/>
+                        <output expression="&quot;2. Pendaftaran Personel Prajurit Baru&quot;" newline="True"/>
+                        <output expression="&quot;3. Validasi Keabsahan Dokumen via QR Code Publik (verify.php)&quot;" newline="True"/>
+                        <output expression="&quot;4. Keluar dari Aplikasi&quot;" newline="True"/>
+                        <output expression="&quot;Masukkan nomor pilihan Anda (1 - 4):&quot;" newline="True"/>
+                        <input variable="menuUtama"/>
+
+                        <if expression="menuUtama == 1">
+                            <then>
+                                <output expression="&quot;[MEMBUKA SUB-SISTEM: LOGIN &amp; AUTENTIKASI]&quot;" newline="True"/>
+                                <output expression="&quot;Menjalankan proses: Pemeriksaan Brute Force, Verifikasi Hash Bcrypt, dan Role Assignment...&quot;" newline="True"/>
+                                <comment text="Simulasi keberhasilan login sebagai admin"/>
+                                <assign variable="isLoggedIn" expression="True"/>
+                                <assign variable="currentUserRole" expression="&quot;admin&quot;"/>
+                                <output expression="&quot;Autentikasi Berhasil. Sesi aktif dibuka sebagai: &quot; &amp; currentUserRole" newline="True"/>
+                            </then>
+                            <else>
+                                <if expression="menuUtama == 2">
+                                    <then>
+                                        <output expression="&quot;[MEMBUKA SUB-SISTEM: PENDAFTARAN PERSONEL]&quot;" newline="True"/>
+                                        <output expression="&quot;Menjalankan proses: Validasi format NRP, Anti-Duplikasi, Enkripsi Kata Sandi, dan Registrasi Pending...&quot;" newline="True"/>
+                                    </then>
+                                    <else>
+                                        <if expression="menuUtama == 3">
+                                            <then>
+                                                <output expression="&quot;[MEMBUKA SUB-SISTEM: VALIDASI PUBLIK QR CODE]&quot;" newline="True"/>
+                                                <output expression="&quot;Menjalankan proses: Pembacaan TTE Token, Komparasi SHA-256 Digest, dan Sertifikasi Otentisitas...&quot;" newline="True"/>
+                                            </then>
+                                            <else>
+                                                <if expression="menuUtama == 4">
+                                                    <then>
+                                                        <output expression="&quot;Terima kasih telah menggunakan Sistem TRISULA TNI AD. Keluar...&quot;" newline="True"/>
+                                                        <assign variable="isRunning" expression="False"/>
+                                                    </then>
+                                                    <else>
+                                                        <output expression="&quot;Pilihan tidak valid! Silakan masukkan angka 1 sampai 4.&quot;" newline="True"/>
+                                                    </else>
+                                                </if>
+                                            </else>
+                                        </if>
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </then>
+                    <else>
+                        <comment text="Sesi masuk terotentikasi"/>
+                        <if expression="currentUserRole == &quot;admin&quot;">
+                            <then>
+                                <output expression="&quot;[DASHBOARD UTAMA ADMINISTRATOR SATUAN]&quot;" newline="True"/>
+                                <output expression="&quot;1. Intelijen Personel (Analisis Batas Usia Pensiun &amp; Rotasi Jabatan &gt;2 Tahun)&quot;" newline="True"/>
+                                <output expression="&quot;2. Verifikasi &amp; Pengesahan Tanda Tangan Elektronik (TTE) 33 Slot Dosir&quot;" newline="True"/>
+                                <output expression="&quot;3. Manajemen Data Personel &amp; Approval Akun Pending&quot;" newline="True"/>
+                                <output expression="&quot;4. Audit Log Keamanan &amp; Backup Pangkalan Data&quot;" newline="True"/>
+                                <output expression="&quot;5. Keluar Sesi (Logout)&quot;" newline="True"/>
+                                <output expression="&quot;Pilih Menu Admin (1 - 5):&quot;" newline="True"/>
+                                <input variable="subRoleMenu"/>
+
+                                <if expression="subRoleMenu == 1">
+                                    <then>
+                                        <output expression="&quot;Mengeksekusi Analisis BUP (Pama/Pamen 58, Ba/Ta 56, PNS 60) dan Peringatan Rotasi TOD/TOA...&quot;" newline="True"/>
+                                    </then>
+                                    <else>
+                                        <if expression="subRoleMenu == 2">
+                                            <then>
+                                                <output expression="&quot;Mengeksekusi Modul Verifikasi TTE: Pemeriksaan Master PDF, Perhitungan Hash SHA-256, dan Stempel Digital FPDI/TCPDF...&quot;" newline="True"/>
+                                            </then>
+                                            <else>
+                                                <if expression="subRoleMenu == 5">
+                                                    <then>
+                                                        <output expression="&quot;Mengakhiri sesi Administrator. Logout berhasil.&quot;" newline="True"/>
+                                                        <assign variable="isLoggedIn" expression="False"/>
+                                                        <assign variable="currentUserRole" expression="&quot;&quot;"/>
+                                                    </then>
+                                                    <else>
+                                                        <output expression="&quot;Modul terpilih sedang diproses oleh sistem.&quot;" newline="True"/>
+                                                    </else>
+                                                </if>
+                                            </else>
+                                        </if>
+                                    </else>
+                                </if>
+                            </then>
+                            <else>
+                                <output expression="&quot;[DASHBOARD UTAMA PRAJURIT / PERSONEL]&quot;" newline="True"/>
+                                <output expression="&quot;1. Unggah &amp; Pindai Kamera Dokumen Dosir (Slot 01 s.d. 33)&quot;" newline="True"/>
+                                <output expression="&quot;2. Pantau Status Verifikasi Berkas (Pending / Disahkan / Ditolak)&quot;" newline="True"/>
+                                <output expression="&quot;3. Unduh Arsip Resmi Bersertifikat TTE Digital &amp; QR Code&quot;" newline="True"/>
+                                <output expression="&quot;4. Keluar Sesi (Logout)&quot;" newline="True"/>
+                                <output expression="&quot;Pilih Menu Prajurit (1 - 4):&quot;" newline="True"/>
+                                <input variable="subRoleMenu"/>
+
+                                <if expression="subRoleMenu == 1">
+                                    <then>
+                                        <output expression="&quot;Mengeksekusi Pengunggahan Dosir: Pemilihan 33 Slot, WebRTC Scanner jsPDF, Penamaan Indeks Otomatis...&quot;" newline="True"/>
+                                    </then>
+                                    <else>
+                                        <if expression="subRoleMenu == 4">
+                                            <then>
+                                                <output expression="&quot;Mengakhiri sesi Prajurit. Logout berhasil.&quot;" newline="True"/>
+                                                <assign variable="isLoggedIn" expression="False"/>
+                                                <assign variable="currentUserRole" expression="&quot;&quot;"/>
+                                            </then>
+                                            <else>
+                                                <output expression="&quot;Menampilkan data arsip personel...&quot;" newline="True"/>
+                                            </else>
+                                        </if>
+                                    </else>
+                                </if>
+                            </else>
+                        </if>
+                    </else>
+                </if>
+            </while>
+        </body>
+    </function>
+</flowgorithm>

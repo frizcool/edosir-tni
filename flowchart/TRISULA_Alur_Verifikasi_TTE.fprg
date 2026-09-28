@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="3.0">
+    <attributes>
+        <attribute name="name" value="Alur Verifikasi dan Pengesahan TTE TRISULA TNI AD"/>
+        <attribute name="authors" value="Letda Czi Fris Wardani"/>
+        <attribute name="about" value="Diagram alur verifikasi berkas oleh Administrator Satuan, penolakan dengan catatan koreksi, atau persetujuan bersertifikat Tanda Tangan Elektronik (TTE), kalkulasi SHA-256, dan pembubuhan QR Code via FPDI/TCPDF"/>
+        <attribute name="saved" value="2026-09-22 02:35:00 PM"/>
+        <attribute name="created" value="2026-09-22 01:50:00 PM"/>
+        <attribute name="edited" value="2026-09-22 02:35:00 PM"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="adminId" type="String" array="False" size=""/>
+            <declare name="fileId" type="Integer" array="False" size=""/>
+            <declare name="namaPersonel" type="String" array="False" size=""/>
+            <declare name="nrpPersonel" type="String" array="False" size=""/>
+            <declare name="jenisBerkas" type="String" array="False" size=""/>
+            <declare name="keputusan" type="String" array="False" size=""/>
+            <declare name="alasanPenolakan" type="String" array="False" size=""/>
+            <declare name="fileHashSha256" type="String" array="False" size=""/>
+            <declare name="tteToken" type="String" array="False" size=""/>
+            <declare name="qrUrl" type="String" array="False" size=""/>
+            <declare name="tglPengesahan" type="String" array="False" size=""/>
+
+            <output expression="&quot;=== SISTEM TRISULA TNI AD: VERIFIKASI &amp; TTE ARSIP ELEKTRONIK ===&quot;" newline="True"/>
+            <output expression="&quot;Petugas Verifikator (Admin):&quot;" newline="True"/>
+            <input variable="adminId"/>
+            <output expression="&quot;Masukkan ID Berkas yang Berstatus PENDING:&quot;" newline="True"/>
+            <input variable="fileId"/>
+
+            <comment text="Simulasi pengambilan detail data berkas dari pangkalan data"/>
+            <assign variable="namaPersonel" expression="&quot;Sertu Bambang Suryanto&quot;"/>
+            <assign variable="nrpPersonel" expression="&quot;21120034560790&quot;"/>
+            <assign variable="jenisBerkas" expression="&quot;05_SK_KENAIKAN_PANGKAT&quot;"/>
+
+            <output expression="&quot;Menampilkan Dokumen untuk Ditinjau:&quot;" newline="True"/>
+            <output expression="&quot;Prajurit: &quot; &amp; namaPersonel &amp; &quot; (NRP: &quot; &amp; nrpPersonel &amp; &quot;)&quot;" newline="True"/>
+            <output expression="&quot;Kategori: &quot; &amp; jenisBerkas" newline="True"/>
+            <output expression="&quot;Status Saat Ini: PENDING VERIFIKASI&quot;" newline="True"/>
+            <output expression="&quot;------------------------------------------------------------&quot;" newline="True"/>
+            <output expression="&quot;Tentukan Keputusan Verifikasi? Ketik 'approve' untuk Sahkan TTE, atau 'reject' untuk Tolak:&quot;" newline="True"/>
+            <input variable="keputusan"/>
+
+            <if expression="keputusan == &quot;reject&quot; || keputusan == &quot;REJECT&quot;">
+                <then>
+                    <output expression="&quot;Masukkan Alasan Penolakan / Catatan Koreksi untuk Prajurit:&quot;" newline="True"/>
+                    <input variable="alasanPenolakan"/>
+                    
+                    <comment text="Pembaruan status berkas menjadi ditolak"/>
+                    <output expression="&quot;Memperbarui tabel 'dosir_files' (status = 'rejected', catatan = '&quot; &amp; alasanPenolakan &amp; &quot;')...&quot;" newline="True"/>
+                    <output expression="&quot;Mencatat aksi penolakan ke tabel 'audit_logs'...&quot;" newline="True"/>
+                    <output expression="&quot;Mengirimkan notifikasi sistem ke prajurit terkait: Perbaiki dokumen sesuai catatan.&quot;" newline="True"/>
+                    <output expression="&quot;HASIL: Dokumen BERHASIL DITOLAK. Menunggu unggah ulang dari prajurit.&quot;" newline="True"/>
+                </then>
+                <else>
+                    <if expression="keputusan == &quot;approve&quot; || keputusan == &quot;APPROVE&quot;">
+                        <then>
+                            <comment text="Proses Otentikasi Tanda Tangan Elektronik (TTE) Resmi TNI AD"/>
+                            <output expression="&quot;Mengambil berkas master bersih dari direktori fisik...&quot;" newline="True"/>
+                            
+                            <comment text="Kalkulasi nilai hash kriptografi SHA-256 berkas"/>
+                            <assign variable="fileHashSha256" expression="&quot;a7f4b8c9d2e1f0e382716354928170abcd543210987654321fedcba098765432&quot;"/>
+                            <output expression="&quot;Nilai Fingerprint Kriptografi SHA-256: &quot; &amp; fileHashSha256" newline="True"/>
+
+                            <comment text="Pembuatan TTE Token unik dan URL Validasi Publik"/>
+                            <assign variable="tteToken" expression="&quot;TTE-TRISULA-202609-&quot; &amp; nrpPersonel &amp; &quot;-&quot; &amp; ToString(fileId)"/>
+                            <assign variable="qrUrl" expression="&quot;https://trisula-tniad.mil.id/verify.php?token=&quot; &amp; tteToken"/>
+                            <assign variable="tglPengesahan" expression="&quot;2026-09-22 14:30:00&quot;"/>
+
+                            <output expression="&quot;Membangkitkan QR Code verifikasi publik menuju: &quot; &amp; qrUrl" newline="True"/>
+                            <output expression="&quot;Menggunakan modul FPDI &amp; TCPDF untuk injeksi header dan stempel digital...&quot;" newline="True"/>
+                            <output expression="&quot;- Running Header: 'KLASIFIKASI: RAHASIA - ARSIP ELEKTRONIK TNI AD'&quot;" newline="True"/>
+                            <output expression="&quot;- Cap Stempel Digital Resmi: Logo Kartika Eka Paksi &amp; QR Code Terpasang&quot;" newline="True"/>
+                            <output expression="&quot;- Metadata TTE: &quot; &amp; tteToken &amp; &quot; | Disahkan Oleh: &quot; &amp; adminId" newline="True"/>
+
+                            <comment text="Pembaruan data pada database"/>
+                            <output expression="&quot;Menyimpan status ke tabel 'dosir_files': is_verified = 1, status = 'approved', tte_token = '&quot; &amp; tteToken &amp; &quot;'...&quot;" newline="True"/>
+                            <output expression="&quot;Mencatat log sertifikasi ke tabel 'audit_logs'...&quot;" newline="True"/>
+
+                            <output expression="&quot;============================================================&quot;" newline="True"/>
+                            <output expression="&quot;PENGESAHAN TTE DIGITAL BERHASIL!&quot;" newline="True"/>
+                            <output expression="&quot;Nomor Register TTE: &quot; &amp; tteToken" newline="True"/>
+                            <output expression="&quot;SHA-256 Hash    : &quot; &amp; fileHashSha256" newline="True"/>
+                            <output expression="&quot;Status Berkas    : APPROVED &amp; SECURED (Siap Diunduh Berstempel Sah)&quot;" newline="True"/>
+                            <output expression="&quot;============================================================&quot;" newline="True"/>
+                        </then>
+                        <else>
+                            <output expression="&quot;Koreksi Batal: Pilihan tidak dikenal. Masukkan 'approve' atau 'reject'.&quot;" newline="True"/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+        </body>
+    </function>
+</flowgorithm>

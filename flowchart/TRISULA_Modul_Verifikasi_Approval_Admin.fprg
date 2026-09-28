@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="3.0">
+    <attributes>
+        <attribute name="name" value="Modul Telaah dan Verifikasi Berkas Admin TRISULA TNI AD"/>
+        <attribute name="authors" value="Letda Czi Fris Wardani"/>
+        <attribute name="about" value="Diagram alur operasional Staf Personel dalam meninjau antrean dosir pending, 4 kriteria uji kelayakan dokumen, serta percabangan persetujuan TTE atau penolakan dengan catatan revisi"/>
+        <attribute name="saved" value="2026-09-22 03:40:00 PM"/>
+        <attribute name="created" value="2026-09-22 03:15:00 PM"/>
+        <attribute name="edited" value="2026-09-22 03:40:00 PM"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="adminNrp" type="String" array="False" size=""/>
+            <declare name="fileId" type="Integer" array="False" size=""/>
+            <declare name="namaPersonel" type="String" array="False" size=""/>
+            <declare name="jenisBerkas" type="String" array="False" size=""/>
+            <declare name="cekKeterbacaan" type="Boolean" array="False" size=""/>
+            <declare name="cekKeabsahanStempel" type="Boolean" array="False" size=""/>
+            <declare name="cekKesesuaianKategori" type="Boolean" array="False" size=""/>
+            <declare name="cekKelengkapanHalaman" type="Boolean" array="False" size=""/>
+            <declare name="semuaLolos" type="Boolean" array="False" size=""/>
+            <declare name="alasanPenolakan" type="String" array="False" size=""/>
+            <declare name="inputPilihan" type="String" array="False" size=""/>
+
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+            <output expression="&quot;   MODUL TELAAH &amp; VERIFIKASI DOSIR OLEH STAF PERSONEL SATUAN    &quot;" newline="True"/>
+            <output expression="&quot;                    SISTEM TRISULA TNI AD&quot;" newline="True"/>
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+
+            <output expression="&quot;NRP Petugas Verifikator Stafpers:&quot;" newline="True"/>
+            <input variable="adminNrp"/>
+            <output expression="&quot;Masukkan ID Dokumen Dosir yang Akan Ditelaah:&quot;" newline="True"/>
+            <input variable="fileId"/>
+
+            <assign variable="namaPersonel" expression="&quot;Kopda Ahmad Zaelani&quot;"/>
+            <assign variable="jenisBerkas" expression="&quot;02 - Akte Kelahiran Anak Pertama&quot;"/>
+
+            <output expression="&quot;Membuka Berkas ID: &quot; &amp; ToString(fileId) &amp; &quot; di Penampil PDF Terenkripsi...&quot;" newline="True"/>
+            <output expression="&quot;Prajurit Pemilik: &quot; &amp; namaPersonel &amp; &quot; | Jenis: &quot; &amp; jenisBerkas" newline="True"/>
+            <output expression="&quot;-----------------------------------------------------------------&quot;" newline="True"/>
+            <output expression="&quot;MELAKUKAN 4 TAHAP UJI KELAYAKAN ARSIP MILITER:&quot;" newline="True"/>
+
+            <output expression="&quot;1. Apakah teks dokumen jelas &amp; tidak buram? (ya/tidak):&quot;" newline="True"/>
+            <input variable="inputPilihan"/>
+            <if expression="inputPilihan == &quot;ya&quot; || inputPilihan == &quot;YA&quot; || inputPilihan == &quot;y&quot;">
+                <then>
+                    <assign variable="cekKeterbacaan" expression="True"/>
+                </then>
+                <else>
+                    <assign variable="cekKeterbacaan" expression="False"/>
+                </else>
+            </if>
+
+            <output expression="&quot;2. Apakah stempel/tanda tangan pejabat berwenang otentik? (ya/tidak):&quot;" newline="True"/>
+            <input variable="inputPilihan"/>
+            <if expression="inputPilihan == &quot;ya&quot; || inputPilihan == &quot;YA&quot; || inputPilihan == &quot;y&quot;">
+                <then>
+                    <assign variable="cekKeabsahanStempel" expression="True"/>
+                </then>
+                <else>
+                    <assign variable="cekKeabsahanStempel" expression="False"/>
+                </else>
+            </if>
+
+            <output expression="&quot;3. Apakah isi berkas sesuai dengan slot katalog dosir? (ya/tidak):&quot;" newline="True"/>
+            <input variable="inputPilihan"/>
+            <if expression="inputPilihan == &quot;ya&quot; || inputPilihan == &quot;YA&quot; || inputPilihan == &quot;y&quot;">
+                <then>
+                    <assign variable="cekKesesuaianKategori" expression="True"/>
+                </then>
+                <else>
+                    <assign variable="cekKesesuaianKategori" expression="False"/>
+                </else>
+            </if>
+
+            <output expression="&quot;4. Apakah seluruh halaman berkas lengkap / tidak terpotong? (ya/tidak):&quot;" newline="True"/>
+            <input variable="inputPilihan"/>
+            <if expression="inputPilihan == &quot;ya&quot; || inputPilihan == &quot;YA&quot; || inputPilihan == &quot;y&quot;">
+                <then>
+                    <assign variable="cekKelengkapanHalaman" expression="True"/>
+                </then>
+                <else>
+                    <assign variable="cekKelengkapanHalaman" expression="False"/>
+                </else>
+            </if>
+
+            <comment text="Evaluasi hasil 4 kriteria kelayakan berkas"/>
+            <if expression="cekKeterbacaan &amp;&amp; cekKeabsahanStempel &amp;&amp; cekKesesuaianKategori &amp;&amp; cekKelengkapanHalaman">
+                <then>
+                    <assign variable="semuaLolos" expression="True"/>
+                </then>
+                <else>
+                    <assign variable="semuaLolos" expression="False"/>
+                </else>
+            </if>
+
+            <if expression="semuaLolos">
+                <then>
+                    <output expression="&quot;=================================================================&quot;" newline="True"/>
+                    <output expression="&quot;KEPUTUSAN: DOKUMEN MEMENUHI SELURUH SYARAT KELAYAKAN (LOLOS)&quot;" newline="True"/>
+                    <output expression="&quot;Mengarahkan berkas ke Modul Penerbitan TTE Kriptografi...&quot;" newline="True"/>
+                    <output expression="&quot;Dokumen siap dibubuhi cap stempel dinas dan QR Code resmi.&quot;" newline="True"/>
+                    <output expression="&quot;=================================================================&quot;" newline="True"/>
+                </then>
+                <else>
+                    <output expression="&quot;=================================================================&quot;" newline="True"/>
+                    <output expression="&quot;KEPUTUSAN: DOKUMEN TIDAK MEMENUHI SYARAT (DITOLAK / REJECT)&quot;" newline="True"/>
+                    <output expression="&quot;Masukkan rincian alasan penolakan dan instruksi perbaikan untuk prajurit:&quot;" newline="True"/>
+                    <input variable="alasanPenolakan"/>
+
+                    <output expression="&quot;Memperbarui basis data dosir_files: status = 'rejected'...&quot;" newline="True"/>
+                    <output expression="&quot;Menyimpan catatan penolakan: &quot; &amp; alasanPenolakan" newline="True"/>
+                    <output expression="&quot;Mengirim notifikasi koreksi ke akun prajurit: &quot; &amp; namaPersonel" newline="True"/>
+                    <output expression="&quot;Mencatat aksi penolakan oleh verifikator &quot; &amp; adminNrp &amp; &quot; ke activity_log.&quot;" newline="True"/>
+                    <output expression="&quot;=================================================================&quot;" newline="True"/>
+                </else>
+            </if>
+        </body>
+    </function>
+</flowgorithm>

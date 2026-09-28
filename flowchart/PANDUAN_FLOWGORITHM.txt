@@ -1,0 +1,124 @@
+================================================================================
+          PANDUAN PENGGUNAAN FLOWCHART SISTEM TRISULA TNI AD
+        (Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip)
+                       FORMAT RESMI: FLOWGORITHM (.fprg)
+================================================================================
+Penulis   : Letda Czi Fris Wardani
+Aplikasi  : TRISULA TNI AD (Sistem Manajemen Dosir Elektronik Prajurit)
+Direktori : d:\xampp\htdocs\edosir-tni\flowchart\
+================================================================================
+
+1. PENDAHULUAN
+Flowchart sistem TRISULA TNI AD telah di-breakdown secara komprehensif ke dalam
+18 modul diagram alur menggunakan standar XML resmi Flowgorithm (fileversion="3.0"). 
+Seluruh berkas berekstensi .fprg ini dapat dibuka, diedit komponen grafisnya,
+dan dijalankan simulasinya (interactive step-by-step execution F5/F6) secara 
+langsung menggunakan perangkat lunak Flowgorithm.
+
+--------------------------------------------------------------------------------
+2. DAFTAR LENGKAP 18 BERKAS FLOWGORITHM (.fprg) BERDASARKAN KLASTER MODUL
+--------------------------------------------------------------------------------
+
+A. KLASTER ALUR UTAMA & SISTEM INDUK (MASTER FLOW)
+1. TRISULA_Alur_Utama_Sistem.fprg
+   - Diagram Alur Induk (Master Flowchart) arsitektur sistem TRISULA.
+   - Mengorkestrasi alur publik (Login, Pendaftaran, Cek QR) dan alur terotentikasi
+     berdasarkan hak akses pengguna (Role: Administrator Satuan vs Prajurit).
+
+B. KLASTER AUTENTIKASI & AKUN PENGGUNA
+2. TRISULA_Alur_Login_Autentikasi.fprg
+   - Alur masuk portal dan keamanan kredensial.
+   - Proteksi brute-force (5x kegagalan), verifikasi hash Bcrypt, pengecekan status
+     akun (pending/approved/rejected), serta pengalihan ke dashboard role terkait.
+3. TRISULA_Alur_Pendaftaran_Personel.fprg
+   - Alur registrasi mandiri prajurit/PNS baru (register.php).
+   - Validasi format & panjang NRP, pencegahan duplikasi data pada database,
+     hashing kata sandi, dan pembuatan akun berstatus 'pending'.
+4. TRISULA_Modul_Approval_Akun_Prajurit.fprg
+   - Alur verifikasi dan persetujuan akun prajurit baru oleh Admin Satuan.
+   - Pencocokan identitas dengan buku nominatif satuan, keputusan setujui (approve),
+     tolak (reject), atau eliminasi registrasi palsu (delete).
+
+C. KLASTER PENGUNGGAHAN, PEMINDAIAN KAMERA, & PENGINDEKSAN DOSIR
+5. TRISULA_Alur_Unggah_Scan_Dosir.fprg
+   - Alur umum pengunggahan dan pemindaian 33 slot katalog dosir standar TNI AD.
+6. TRISULA_Modul_Kamera_Scanner_jsPDF.fprg
+   - Alur teknis pemindai kamera dokumen WebRTC pada browser (scan.js).
+   - Penangkapan canvas, filter citra (auto-contrast/grayscale), pemindaian multi-halaman
+     (multi-page loop), dan kompilasi langsung ke file PDF via library jsPDF.
+7. TRISULA_Modul_Indeksasi_Abjad_Penyimpanan.fprg
+   - Algoritma penamaan militer terindeks abjad otomatis: {NRP}_{KODE}[abjad].pdf.
+   - Deteksi riwayat berkas sebelumnya (A, B, C, dst), pembuatan direktori fisik
+     terisolasi (uploads/FOLDER XX/), proteksi direktori, dan injeksi watermark pending.
+
+D. KLASTER VERIFIKASI, TTE DIGITAL, & UJI KEABSAHAN
+8. TRISULA_Alur_Verifikasi_TTE.fprg
+   - Alur umum verifikasi berkas oleh Administrator Satuan dan pengesahan TTE.
+9. TRISULA_Modul_Verifikasi_Approval_Admin.fprg
+   - Alur operasional telaah berkas pending oleh Staf Personel Satuan.
+   - 4 tahap uji kelayakan: keterbacaan, keabsahan cap basah, kesesuaian kategori slot,
+     dan kelengkapan halaman. Serta percabangan tolak dengan catatan koreksi.
+10. TRISULA_Modul_Penerbitan_TTE_Kriptografi.fprg
+    - Alur teknis kriptografi penerbitan TTE resmi TNI AD.
+    - Pembacaan master PDF murni, kalkulasi hash SHA-256 (64 hex), pembentukan token
+      TTE unik, pembentukan QR Code payload, serta injeksi running header klasifikasi
+      RAHASIA dan stempel dinas digital via modul FPDI / TCPDF.
+11. TRISULA_Alur_Verifikasi_Publik_QR.fprg
+    - Alur validasi keabsahan QR Code oleh pihak eksternal/penguji (verify.php).
+    - Pencarian token TTE, uji komparasi ulang hash SHA-256 fisik file (anti manipulasi),
+      dan penayangan sertifikat keabsahan resmi Kartika Eka Paksi.
+
+E. KLASTER INTELIJEN PERSONEL & ANALISIS KARIER
+12. TRISULA_Alur_Analisis_Pensiun_Jabatan.fprg
+    - Alur ringkasan komputasi Batas Usia Pensiun dan rotasi masa jabatan.
+13. TRISULA_Modul_Analisis_BUP_Pensiun.fprg
+    - Komputasi khusus Batas Usia Pensiun (BUP) berdasarkan strata kepangkatan:
+      * Perwira (Pama/Pamen/Pati) : 58 Tahun (UU TNI No. 34/2004)
+      * Bintara dan Tamtama       : 56 Tahun
+      * Pegawai Negeri Sipil (PNS): 60 Tahun (UU ASN)
+      Serta proyeksi Masa Persiapan Pensiun (MPP) dan sisa masa dinas prajurit.
+14. TRISULA_Modul_Analisis_Rotasi_Jabatan.fprg
+    - Komputasi Masa Dinas Jabatan (MDJ) dari TMT Surat Perintah Jabatan.
+    - Deteksi dini masa jabatan melampaui 24 bulan (> 2 Tahun) guna rekomendasi
+      Tour of Duty dan Tour of Area (TOD/TOA) untuk regenerasi struktur satuan.
+15. TRISULA_Modul_Monitoring_Kelengkapan_33_Dosir.fprg
+    - Audit kelengkapan 33 item dosir wajib per prajurit.
+    - Evaluasi pemenuhan syarat Usul Kenaikan Pangkat (UKP) dan Pendidikan (Dikbang).
+
+F. KLASTER PEMELIHARAAN SISTEM, AUDIT & PELAPORAN
+16. TRISULA_Modul_Audit_Log_Keamanan.fprg
+    - Perekaman jejak audit sistem ke tabel activity_log (SIEM audit trail).
+    - Deteksi anomali akses dan penanganan insiden keamanan serangan brute-force.
+17. TRISULA_Modul_Backup_Restore_Database.fprg
+    - Alur pencadangan pangkalan data (DDL & DML dump), penguncian tabel konsisten,
+      kompresi arsip gzip (.sql.gz), kalkulasi checksum SHA-256, dan pencatatan backup_log.
+18. TRISULA_Modul_Rekapitulasi_Laporan_Dosir.fprg
+    - Pembuatan rekapitulasi data agregat berkas dosir prajurit per satuan/kompi.
+    - Ekspor laporan dinas resmi ke lembar kerja Excel (XLSX) dan cetak PDF (TCPDF).
+
+--------------------------------------------------------------------------------
+3. CARA MEMBUKA DAN MENJALANKAN SIMULASI DI FLOWGORITHM
+--------------------------------------------------------------------------------
+Langkah 1: Unduh & Pasang Aplikasi
+   - Unduh installer gratis di situs resmi Flowgorithm: http://www.flowgorithm.org/
+   - Pasang aplikasi Flowgorithm di komputer Windows Anda.
+
+Langkah 2: Membuka Berkas Modul
+   - Buka Flowgorithm -> Klik menu "File" -> "Open" (atau tekan Ctrl + O).
+   - Arahkan ke folder: d:\xampp\htdocs\edosir-tni\flowchart\
+   - Pilih salah satu dari 18 berkas .fprg di atas.
+
+Langkah 3: Menjalankan Simulasi Interaktif
+   - Klik tombol "Run" (ikon Segitiga Hijau) atau tekan F5.
+   - Anda dapat memasukkan input langsung pada konsol simulasi untuk menguji
+     berbagai skenario kondisi logika.
+   - Gunakan tombol "Step" (F6) untuk melihat alur diagram berjalan langkah demi
+     langkah secara visual.
+
+Langkah 4: Ekspor Diagram ke Gambar & Kode Program
+   - Ekspor diagram visual: Menu "Tools" -> "Export to Image File" (PNG, SVG, EMF).
+   - Lihat konversi kode program: Menu "Tools" -> "Source Code Viewer" (PHP, C++, Python, dll).
+
+================================================================================
+DOKUMENTASI RESMI SISTEM TRISULA TNI AD - MABESAD
+================================================================================

@@ -11,12 +11,25 @@ class ComposerStaticInit52b7ffe87aa72512202e24bd01d7aaae
         array (
             'setasign\\Fpdi\\' => 14,
         ),
+        'P' =>
+        array (
+            'PhpOffice\\PhpWord\\' => 18,
+            'PhpOffice\\Math\\' => 15,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
         'setasign\\Fpdi\\' =>
         array (
             0 => __DIR__ . '/..' . '/setasign/fpdi/src',
+        ),
+        'PhpOffice\\PhpWord\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/phpoffice/phpword/src/PhpWord',
+        ),
+        'PhpOffice\\Math\\' =>
+        array (
+            0 => __DIR__ . '/..' . '/phpoffice/math/src/Math',
         ),
     );
 

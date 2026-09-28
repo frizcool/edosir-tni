@@ -30,7 +30,7 @@ include __DIR__ . '/includes/header.php';
         <div class="brand-badge" style="margin:0 auto 10px;">★</div>
       <?php endif; ?>
       <h2 style="margin:0;"><?= htmlspecialchars(get_setting($pdo, 'app_name', APP_NAME)) ?></h2>
-      <div style="color:var(--text-dim);font-size:13px;margin-top:3px;"><?= htmlspecialchars(get_setting($pdo, 'app_subtitle', 'Sistem Dosir Elektronik Personel')) ?></div>
+      <div style="color:var(--text-dim);font-size:13px;margin-top:3px;"><?= htmlspecialchars(get_setting($pdo, 'app_subtitle', 'Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip')) ?></div>
     </div>
 
     <?php if ($error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>

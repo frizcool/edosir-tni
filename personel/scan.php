@@ -253,12 +253,25 @@ if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') 
     flash.style.opacity = '0.85';
     setTimeout(() => { flash.style.opacity = '0'; }, 120);
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    let cw = video.videoWidth;
+    let ch = video.videoHeight;
+    const maxDim = 1920;
+    if (cw > maxDim || ch > maxDim) {
+      if (cw > ch) {
+        ch = Math.round((ch * maxDim) / cw);
+        cw = maxDim;
+      } else {
+        cw = Math.round((cw * maxDim) / ch);
+        ch = maxDim;
+      }
+    }
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, cw, ch);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
     captures.push(dataUrl);
     updateGallery();
     setStatus(`✓ Halaman ke-${captures.length} berhasil ditangkap! Tambah halaman lagi atau klik <strong>"Buat Berkas PDF & Unggah"</strong>.`, 'success');

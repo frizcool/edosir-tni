@@ -52,8 +52,8 @@ require_once APP_ROOT . '/includes/functions.php';
 require_once APP_ROOT . '/includes/auth.php';
 
 // Pengaturan dinamis dari database (dapat diubah Administrator di menu Pengaturan)
-$dynamicAppName = get_setting($pdo, 'app_name', 'E-DOSIR TNI AD');
-define('APP_NAME', $dynamicAppName ?: 'E-DOSIR TNI AD');
+$dynamicAppName = get_setting($pdo, 'app_name', 'TRISULA TNI AD');
+define('APP_NAME', $dynamicAppName ?: 'TRISULA TNI AD');
 
 $dynamicBatasTahun = (int) get_setting($pdo, 'batas_tahun_jabatan', 2);
 define('BATAS_TAHUN_JABATAN', $dynamicBatasTahun > 0 ? $dynamicBatasTahun : 2);

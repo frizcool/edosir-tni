@@ -1,0 +1,153 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="3.0">
+    <attributes>
+        <attribute name="name" value="Alur Unggah dan Pindai Dokumen Dosir TRISULA TNI AD"/>
+        <attribute name="authors" value="Letda Czi Fris Wardani"/>
+        <attribute name="about" value="Diagram alur pemilihan 33 slot dosir standar TNI AD, pemindaian kamera jsPDF, validasi berkas PDF maks 10MB, penamaan otomatis terindeks abjad, dan penyimpanan pada direktori terisolasi"/>
+        <attribute name="saved" value="2026-09-22 02:25:00 PM"/>
+        <attribute name="created" value="2026-09-22 01:40:00 PM"/>
+        <attribute name="edited" value="2026-09-22 02:25:00 PM"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="nrp" type="String" array="False" size=""/>
+            <declare name="slotNomor" type="Integer" array="False" size=""/>
+            <declare name="kodeBerkas" type="String" array="False" size=""/>
+            <declare name="namaBerkas" type="String" array="False" size=""/>
+            <declare name="folderTujuan" type="String" array="False" size=""/>
+            <declare name="metodeInput" type="Integer" array="False" size=""/>
+            <declare name="formatFile" type="String" array="False" size=""/>
+            <declare name="ukuranMB" type="Real" array="False" size=""/>
+            <declare name="jumlahBerkasLama" type="Integer" array="False" size=""/>
+            <declare name="namaFileOtomatis" type="String" array="False" size=""/>
+            <declare name="slotValid" type="Boolean" array="False" size=""/>
+            <declare name="fileValid" type="Boolean" array="False" size=""/>
+
+            <output expression="&quot;=== SISTEM TRISULA TNI AD: PENGUNGGAHAN &amp; PEMINDAIAN DOSIR ===&quot;" newline="True"/>
+            <output expression="&quot;Masukkan NRP Prajurit Pemilik Berkas:&quot;" newline="True"/>
+            <input variable="nrp"/>
+
+            <output expression="&quot;DAFTAR 33 KATEGORI DOSIR ELEKTRONIK TNI AD:&quot;" newline="True"/>
+            <output expression="&quot;[01] Riwayat Hidup (RH)        [02] Akte Kelahiran           [03] Surat Nikah&quot;" newline="True"/>
+            <output expression="&quot;[04] KTP &amp; KK Keluarga         [05] SK Kenaikan Pangkat      [06] SK Jabatan / Sprin&quot;" newline="True"/>
+            <output expression="&quot;[07] Ijazah Diktuk/Dikbang     [08] Ijazah Umum SD-S1        [09] Riwayat Penugasan Ops&quot;" newline="True"/>
+            <output expression="&quot;... s.d. [33] Dokumen Personel Lainnya&quot;" newline="True"/>
+            <output expression="&quot;Pilih Nomor Slot Dosir yang Ingin Diunggah (1 - 33):&quot;" newline="True"/>
+            <input variable="slotNomor"/>
+
+            <comment text="Validasi nomor slot katalog standar (1 sampai 33)"/>
+            <if expression="slotNomor &gt;= 1 &amp;&amp; slotNomor &lt;= 33">
+                <then>
+                    <assign variable="slotValid" expression="True"/>
+                </then>
+                <else>
+                    <assign variable="slotValid" expression="False"/>
+                </else>
+            </if>
+
+            <if expression="!slotValid">
+                <then>
+                    <output expression="&quot;GAGAL: Nomor slot dosir tidak valid! Hanya diperbolehkan nomor 1 s.d. 33 sesuai standar TNI AD.&quot;" newline="True"/>
+                </then>
+                <else>
+                    <comment text="Penetapan kode katalog dan folder terisolasi"/>
+                    <if expression="slotNomor == 1">
+                        <then>
+                            <assign variable="kodeBerkas" expression="&quot;01_RH&quot;"/>
+                            <assign variable="namaBerkas" expression="&quot;Daftar Riwayat Hidup&quot;"/>
+                            <assign variable="folderTujuan" expression="&quot;uploads/FOLDER 01/&quot;"/>
+                        </then>
+                        <else>
+                            <if expression="slotNomor == 5">
+                                <then>
+                                    <assign variable="kodeBerkas" expression="&quot;05_SK_PANGKAT&quot;"/>
+                                    <assign variable="namaBerkas" expression="&quot;SK Kenaikan Pangkat Terakhir&quot;"/>
+                                    <assign variable="folderTujuan" expression="&quot;uploads/FOLDER 05/&quot;"/>
+                                </then>
+                                <else>
+                                    <assign variable="kodeBerkas" expression="&quot;SLOT_&quot; &amp; ToString(slotNomor)"/>
+                                    <assign variable="namaBerkas" expression="&quot;Berkas Dosir No &quot; &amp; ToString(slotNomor)"/>
+                                    <assign variable="folderTujuan" expression="&quot;uploads/FOLDER &quot; &amp; ToString(slotNomor) &amp; &quot;/&quot;"/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+
+                    <output expression="&quot;Kategori Terpilih: &quot; &amp; namaBerkas &amp; &quot; (&quot; &amp; kodeBerkas &amp; &quot;)&quot;" newline="True"/>
+                    <output expression="&quot;Pilih Cara Pengambilan Dokumen:&quot;" newline="True"/>
+                    <output expression="&quot;1 = Unggah Berkas PDF dari Komputer/Ponsel&quot;" newline="True"/>
+                    <output expression="&quot;2 = Pindai Kamera Langsung (WebRTC Camera Scanner ke jsPDF)&quot;" newline="True"/>
+                    <input variable="metodeInput"/>
+
+                    <if expression="metodeInput == 2">
+                        <then>
+                            <output expression="&quot;Mengaktifkan WebRTC Camera Scanner...&quot;" newline="True"/>
+                            <output expression="&quot;Menangkap dokumen fisik, meratakan perspektif gambar (crop &amp; enhance)...&quot;" newline="True"/>
+                            <output expression="&quot;Mengonversi lembar hasil foto menjadi berkas standar PDF menggunakan library jsPDF...&quot;" newline="True"/>
+                            <assign variable="formatFile" expression="&quot;PDF&quot;"/>
+                            <assign variable="ukuranMB" expression="2.4"/>
+                        </then>
+                        <else>
+                            <output expression="&quot;Pilih file dari direktori lokal Anda...&quot;" newline="True"/>
+                            <output expression="&quot;Masukkan ekstensi file yang diunggah (misal: PDF, JPG, PNG):&quot;" newline="True"/>
+                            <input variable="formatFile"/>
+                            <output expression="&quot;Masukkan estimasi ukuran file (dalam satuan MB):&quot;" newline="True"/>
+                            <input variable="ukuranMB"/>
+                        </else>
+                    </if>
+
+                    <comment text="Validasi jenis MIME dan batas kapasitas file (Maks 10 MB)"/>
+                    <if expression="(formatFile == &quot;PDF&quot; || formatFile == &quot;pdf&quot;) &amp;&amp; ukuranMB &lt;= 10.0">
+                        <then>
+                            <assign variable="fileValid" expression="True"/>
+                        </then>
+                        <else>
+                            <assign variable="fileValid" expression="False"/>
+                        </else>
+                    </if>
+
+                    <if expression="!fileValid">
+                        <then>
+                            <output expression="&quot;PENGUNGGAHAN GAGAL: Format file harus berupa PDF murni dan kapasitas tidak boleh melebihi 10 Megabyte!&quot;" newline="True"/>
+                        </then>
+                        <else>
+                            <comment text="Pemeriksaan jumlah berkas sebelumnya untuk indeksasi abjad militer"/>
+                            <output expression="&quot;Memeriksa riwayat arsip di slot &quot; &amp; ToString(slotNomor) &amp; &quot; untuk prajurit &quot; &amp; nrp &amp; &quot;...&quot;" newline="True"/>
+                            <assign variable="jumlahBerkasLama" expression="0"/>
+                            
+                            <comment text="Penamaan file terindeks otomatis: {NRP}_{KODE}[abjad].pdf"/>
+                            <if expression="jumlahBerkasLama == 0">
+                                <then>
+                                    <assign variable="namaFileOtomatis" expression="nrp &amp; &quot;_&quot; &amp; kodeBerkas &amp; &quot;.pdf&quot;"/>
+                                </then>
+                                <else>
+                                    <if expression="jumlahBerkasLama == 1">
+                                        <then>
+                                            <assign variable="namaFileOtomatis" expression="nrp &amp; &quot;_&quot; &amp; kodeBerkas &amp; &quot;B.pdf&quot;"/>
+                                        </then>
+                                        <else>
+                                            <assign variable="namaFileOtomatis" expression="nrp &amp; &quot;_&quot; &amp; kodeBerkas &amp; &quot;C.pdf&quot;"/>
+                                        </else>
+                                    </if>
+                                </else>
+                            </if>
+
+                            <output expression="&quot;Menyimpan file ke direktori fisik: &quot; &amp; folderTujuan &amp; namaFileOtomatis" newline="True"/>
+                            <output expression="&quot;Menerapkan status awal: PENDING VERIFIKASI (Tanda Air Dinamis Aktif)...&quot;" newline="True"/>
+                            <output expression="&quot;Mencatat metadata arsip ke tabel 'dosir_files' (is_verified = 0, status = 'pending')...&quot;" newline="True"/>
+                            <output expression="&quot;Mencatat aktivitas pengunggahan ke tabel 'audit_logs'...&quot;" newline="True"/>
+
+                            <output expression="&quot;============================================================&quot;" newline="True"/>
+                            <output expression="&quot;PENGUNGGAHAN ARSIP SELESAI DENGAN SUKSES!&quot;" newline="True"/>
+                            <output expression="&quot;Nama Berkas: &quot; &amp; namaFileOtomatis" newline="True"/>
+                            <output expression="&quot;Lokasi: &quot; &amp; folderTujuan" newline="True"/>
+                            <output expression="&quot;Status: Menunggu Pemeriksaan &amp; TTE Digital oleh Administrator Satuan.&quot;" newline="True"/>
+                            <output expression="&quot;============================================================&quot;" newline="True"/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+        </body>
+    </function>
+</flowgorithm>

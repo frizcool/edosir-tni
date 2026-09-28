@@ -1,5 +1,5 @@
-# E-DOSIR TNI AD
-Sistem Dosir Elektronik Personel — PHP native (PDO) + MySQL, tema militer (dark/light mode).
+# TRISULA TNI AD
+**TRISULA** (*Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip*) — Sistem Manajemen Dosir Elektronik & Arsip Digital Personel TNI AD berbasis PHP native (PDO) + MySQL, tema militer (dark/light mode).
 
 ## 1. Fitur Utama
 - **Registrasi & approval akun** — personel mendaftar mandiri, akun aktif setelah disetujui admin.

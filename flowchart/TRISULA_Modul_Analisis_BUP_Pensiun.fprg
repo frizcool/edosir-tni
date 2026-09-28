@@ -1,0 +1,120 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="3.0">
+    <attributes>
+        <attribute name="name" value="Modul Analisis Batas Usia Pensiun (BUP) TRISULA TNI AD"/>
+        <attribute name="authors" value="Letda Czi Fris Wardani"/>
+        <attribute name="about" value="Diagram alur komputasi khusus intelijen personel untuk kalkulasi Batas Usia Pensiun (BUP) berdasarkan strata kepangkatan militer dan proyeksi Masa Persiapan Pensiun (MPP)"/>
+        <attribute name="saved" value="2026-09-22 03:10:00 PM"/>
+        <attribute name="created" value="2026-09-22 02:50:00 PM"/>
+        <attribute name="edited" value="2026-09-22 03:10:00 PM"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="namaPersonel" type="String" array="False" size=""/>
+            <declare name="nrp" type="String" array="False" size=""/>
+            <declare name="strata" type="String" array="False" size=""/>
+            <declare name="tahunLahir" type="Integer" array="False" size=""/>
+            <declare name="tahunTmtTni" type="Integer" array="False" size=""/>
+            <declare name="tahunSekarang" type="Integer" array="False" size=""/>
+            <declare name="bup" type="Integer" array="False" size=""/>
+            <declare name="usiaSekarang" type="Integer" array="False" size=""/>
+            <declare name="tahunPensiun" type="Integer" array="False" size=""/>
+            <declare name="sisaMasaDinas" type="Integer" array="False" size=""/>
+            <declare name="masaPengabdian" type="Integer" array="False" size=""/>
+            <declare name="statusMpp" type="String" array="False" size=""/>
+            <declare name="tindakanStafPers" type="String" array="False" size=""/>
+
+            <assign variable="tahunSekarang" expression="2026"/>
+
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+            <output expression="&quot;     MODUL INTELIJEN PERSONEL: ANALISIS BATAS USIA PENSIUN (BUP)&quot;" newline="True"/>
+            <output expression="&quot;                    SISTEM TRISULA TNI AD&quot;" newline="True"/>
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+
+            <output expression="&quot;Masukkan Nama Prajurit / PNS:&quot;" newline="True"/>
+            <input variable="namaPersonel"/>
+            <output expression="&quot;Masukkan NRP / NIP:&quot;" newline="True"/>
+            <input variable="nrp"/>
+            <output expression="&quot;Pilih Strata Kepangkatan (Perwira / Bintara / Tamtama / PNS):&quot;" newline="True"/>
+            <input variable="strata"/>
+            <output expression="&quot;Masukkan Tahun Kelahiran (contoh: 1970, 1982):&quot;" newline="True"/>
+            <input variable="tahunLahir"/>
+            <output expression="&quot;Masukkan Tahun TMT Masuk Dinas TNI (contoh: 1992, 2005):&quot;" newline="True"/>
+            <input variable="tahunTmtTni"/>
+
+            <comment text="Penetapan Regulasi BUP Resmi TNI AD dan UU ASN"/>
+            <if expression="strata == &quot;Perwira&quot; || strata == &quot;perwira&quot; || strata == &quot;PERWIRA&quot;">
+                <then>
+                    <assign variable="bup" expression="58"/>
+                </then>
+                <else>
+                    <if expression="strata == &quot;Bintara&quot; || strata == &quot;bintara&quot; || strata == &quot;Tamtama&quot; || strata == &quot;tamtama&quot;">
+                        <then>
+                            <assign variable="bup" expression="56"/>
+                        </then>
+                        <else>
+                            <if expression="strata == &quot;PNS&quot; || strata == &quot;pns&quot; || strata == &quot;ASN&quot;">
+                                <then>
+                                    <assign variable="bup" expression="60"/>
+                                </then>
+                                <else>
+                                    <comment text="Nilai baku regulasi perwira militer"/>
+                                    <assign variable="bup" expression="58"/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </else>
+            </if>
+
+            <comment text="Kalkulasi Kronologis Usia dan Proyeksi Pensiun"/>
+            <assign variable="usiaSekarang" expression="tahunSekarang - tahunLahir"/>
+            <assign variable="tahunPensiun" expression="tahunLahir + bup"/>
+            <assign variable="sisaMasaDinas" expression="tahunPensiun - tahunSekarang"/>
+            <assign variable="masaPengabdian" expression="tahunSekarang - tahunTmtTni"/>
+
+            <comment text="Kategorisasi Status Persiapan Masa Pensiun (MPP) &amp; Rekomendasi Staf Personel"/>
+            <if expression="sisaMasaDinas &lt;= 0">
+                <then>
+                    <assign variable="statusMpp" expression="&quot;TELAH MEMASUKI USIA PENSIUN MAKSIMAL&quot;"/>
+                    <assign variable="tindakanStafPers" expression="&quot;Penerbitan Keputusan Pensiun Penuh &amp; Serah Terima Arsip Lengkap Dosir 01 s.d. 33 ke Babinkar&quot;"/>
+                </then>
+                <else>
+                    <if expression="sisaMasaDinas == 1">
+                        <then>
+                            <assign variable="statusMpp" expression="&quot;FASE KRITIS MPP (&lt;= 1 TAHUN MENUJU PENSIUN)&quot;"/>
+                            <assign variable="tindakanStafPers" expression="&quot;Wajib Penerbitan Sprin Bebas Tugas MPP, Pemeriksaan Kesehatan Terakhir, dan Pengusulan Berkas Asabri&quot;"/>
+                        </then>
+                        <else>
+                            <if expression="sisaMasaDinas &lt;= 3">
+                                <then>
+                                    <assign variable="statusMpp" expression="&quot;MENDEKATI PENSIUN (1 s.d. 3 TAHUN)&quot;"/>
+                                    <assign variable="tindakanStafPers" expression="&quot;Pendataan Pra-Pensiun, Pembekalan Keterampilan Kewirausahaan, dan Audit Kelengkapan 33 Dokumen Dosir&quot;"/>
+                                </then>
+                                <else>
+                                    <assign variable="statusMpp" expression="&quot;MASA DINAS AKTIF REGULER&quot;"/>
+                                    <assign variable="tindakanStafPers" expression="&quot;Pembinaan Karier, Penugasan Operasi, dan Evaluasi Kenaikan Pangkat Reguler&quot;"/>
+                                </else>
+                            </if>
+                        </else>
+                    </if>
+                </else>
+            </if>
+
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+            <output expression="&quot;            LEMBAR HASIL ANALISIS BUP PRAJURIT TNI AD            &quot;" newline="True"/>
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+            <output expression="&quot;Nama Prajurit       : &quot; &amp; namaPersonel" newline="True"/>
+            <output expression="&quot;NRP / NIP           : &quot; &amp; nrp" newline="True"/>
+            <output expression="&quot;Strata Golongan     : &quot; &amp; strata &amp; &quot; (BUP Resmi: &quot; &amp; ToString(bup) &amp; &quot; Tahun)&quot;" newline="True"/>
+            <output expression="&quot;Usia Saat Ini       : &quot; &amp; ToString(usiaSekarang) &amp; &quot; Tahun&quot;" newline="True"/>
+            <output expression="&quot;Masa Pengabdian TNI : &quot; &amp; ToString(masaPengabdian) &amp; &quot; Tahun&quot;" newline="True"/>
+            <output expression="&quot;Proyeksi Pensiun    : Tahun &quot; &amp; ToString(tahunPensiun)" newline="True"/>
+            <output expression="&quot;Sisa Masa Dinas     : &quot; &amp; ToString(sisaMasaDinas) &amp; &quot; Tahun&quot;" newline="True"/>
+            <output expression="&quot;Status Kategori     : &quot; &amp; statusMpp" newline="True"/>
+            <output expression="&quot;Rekomendasi Stafpers: &quot; &amp; tindakanStafPers" newline="True"/>
+            <output expression="&quot;=================================================================&quot;" newline="True"/>
+        </body>
+    </function>
+</flowgorithm>
