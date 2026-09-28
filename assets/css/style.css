@@ -969,7 +969,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .table-responsive table { min-width: 640px; }
 th { background: color-mix(in srgb, var(--panel-2) 82%, transparent); }
 
-.content > * {
+.content > *:not(.modal-backdrop) {
   animation: content-enter .48s cubic-bezier(.2, .75, .25, 1) both;
 }
 .content > .grid > * {

@@ -695,14 +695,14 @@ function get_natural_database_stats($pdo) {
             $stats['personel_lengkap'] = (int)$pdo->query("
                 SELECT COUNT(*) FROM personel 
                 WHERE pangkat_id IS NOT NULL 
-                  AND korp_id IS NOT NULL 
                   AND satuan_id IS NOT NULL 
                   AND kotama_id IS NOT NULL
+                  AND (golongan = 'PNS' OR korp_id IS NOT NULL)
             ")->fetchColumn();
             $stats['personel_lengkap_pct'] = round(($stats['personel_lengkap'] / $stats['total_personel']) * 100, 1);
 
             $stats['missing_pangkat'] = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE pangkat_id IS NULL")->fetchColumn();
-            $stats['missing_korp']    = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE korp_id IS NULL")->fetchColumn();
+            $stats['missing_korp']    = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE golongan != 'PNS' AND korp_id IS NULL")->fetchColumn();
             $stats['missing_satuan']  = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE satuan_id IS NULL")->fetchColumn();
             $stats['missing_kotama']  = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE kotama_id IS NULL")->fetchColumn();
         }

@@ -4,8 +4,10 @@ uploads/*
 !uploads/.gitkeep
 !uploads/raw/
 !uploads/raw/.gitkeep
+uploads/raw/*
 !uploads/foto_profil/
 !uploads/foto_profil/.gitkeep
+uploads/foto_profil/*
 
 # Cadangan database & file ekspor
 backups/*

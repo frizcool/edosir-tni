@@ -392,7 +392,7 @@ if ($tab === 'kotama') {
                p.korp, p.korp_id, p.satuan, p.satuan_id, p.kotama, p.kotama_id
         FROM personel p
         WHERE p.pangkat_id IS NULL 
-           OR p.korp_id IS NULL 
+           OR (p.golongan != 'PNS' AND p.korp_id IS NULL)
            OR p.satuan_id IS NULL 
            OR p.kotama_id IS NULL
         ORDER BY p.nama ASC
@@ -535,7 +535,7 @@ include __DIR__ . '/../includes/header.php';
           </td>
           <td style="text-align:right;">
             <div style="display:inline-flex;gap:6px;">
-              <button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:12px;" onclick='editKotama(<?= json_encode($k) ?>)'>✏️</button>
+              <button type="button" class="btn btn-outline" style="padding:4px 8px;font-size:12px;" onclick='editKotama(<?= json_encode($k, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) ?>)'>✏️</button>
               <form method="post" onsubmit="return confirm('Hapus Kotama [<?= htmlspecialchars($k['kode']) ?>]? Pastikan tidak ada satuan atau personel terkait.');" style="display:inline;">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="delete_kotama">
@@ -1248,7 +1248,9 @@ include __DIR__ . '/../includes/header.php';
               <?php endif; ?>
             </td>
             <td>
-              <?php if ($up['korp_id']): ?>
+              <?php if ($up['golongan'] === 'PNS'): ?>
+                <span class="badge badge-nonaktif">- (PNS Non-Korp)</span>
+              <?php elseif ($up['korp_id']): ?>
                 <span class="badge badge-approved">✓ <?= htmlspecialchars($up['korp']) ?></span>
               <?php else: ?>
                 <span class="badge badge-rejected">✕ <?= htmlspecialchars($up['korp'] ?: 'Kosong') ?></span>
@@ -1284,17 +1286,30 @@ include __DIR__ . '/../includes/header.php';
 <?php endif; ?>
 
 <script>
-function openModal(id) {
+window.openModal = function(id) {
   var el = document.getElementById(id);
   if (el) el.classList.add('show');
-}
-function closeModal(id) {
+};
+window.closeModal = function(id) {
   var el = document.getElementById(id);
   if (el) el.classList.remove('show');
-}
-window.addEventListener('click', function(e) {
-  if (e.target && e.target.classList.contains('modal-backdrop')) {
-    e.target.classList.remove('show');
+};
+document.addEventListener('click', function(e) {
+  var closeButton = e.target.closest('.modal-close');
+  if (closeButton) {
+    var modal = closeButton.closest('.modal-backdrop');
+    if (modal) window.closeModal(modal.id);
+    return;
+  }
+
+  if (e.target.classList.contains('modal-backdrop')) {
+    window.closeModal(e.target.id);
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var modal = document.querySelector('.modal-backdrop.show');
+    if (modal) window.closeModal(modal.id);
   }
 });
 
