@@ -36,8 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('/admin/users_approve.php');
 }
 
-// Filter status untuk daftar seluruh akun
+// Filter status & pencarian untuk daftar seluruh akun
 $filterStatus = $_GET['status'] ?? 'all';
+$q = trim($_GET['q'] ?? '');
+$perPage = max(10, min(100, (int)($_GET['per_page'] ?? 25)));
+$page = max(1, (int)($_GET['page'] ?? 1));
 
 // Query akun pending
 $pending = $pdo->query("
@@ -47,18 +50,42 @@ $pending = $pdo->query("
     ORDER BY u.created_at ASC
 ")->fetchAll();
 
-// Query seluruh akun personel
+// Pembangun kueri seluruh akun personel
+$whereAll = " WHERE u.role = 'personel'";
+$paramsAll = [];
+if ($filterStatus !== 'all' && in_array($filterStatus, ['approved','pending','rejected','nonaktif'], true)) {
+    $whereAll .= " AND u.status = ?";
+    $paramsAll[] = $filterStatus;
+}
+if ($q !== '') {
+    $whereAll .= " AND (u.username LIKE ? OR p.nama LIKE ? OR p.nrp LIKE ?)";
+    $likeQ = "%$q%";
+    $paramsAll[] = $likeQ;
+    $paramsAll[] = $likeQ;
+    $paramsAll[] = $likeQ;
+}
+
+// Hitung total seluruh akun personel untuk paginasi
+$countSqlAll = "
+    SELECT COUNT(*) 
+    FROM users u LEFT JOIN personel p ON p.id = u.personel_id
+    $whereAll
+";
+$stmtCountAll = $pdo->prepare($countSqlAll);
+$stmtCountAll->execute($paramsAll);
+$totalRecordsAll = (int)$stmtCountAll->fetchColumn();
+
+$totalPagesAll = max(1, (int)ceil($totalRecordsAll / $perPage));
+$page = min($page, $totalPagesAll);
+$offsetAll = ($page - 1) * $perPage;
+
 $sqlAll = "
     SELECT u.*, p.nama, p.nrp, p.pangkat, p.satuan, p.id as p_id
     FROM users u LEFT JOIN personel p ON p.id = u.personel_id
-    WHERE u.role = 'personel'
+    $whereAll
+    ORDER BY u.updated_at DESC
+    LIMIT $perPage OFFSET $offsetAll
 ";
-$paramsAll = [];
-if ($filterStatus !== 'all' && in_array($filterStatus, ['approved','pending','rejected','nonaktif'], true)) {
-    $sqlAll .= " AND u.status = ?";
-    $paramsAll[] = $filterStatus;
-}
-$sqlAll .= " ORDER BY u.updated_at DESC";
 $stmtAll = $pdo->prepare($sqlAll);
 $stmtAll->execute($paramsAll);
 $allUsers = $stmtAll->fetchAll();
@@ -134,12 +161,20 @@ include __DIR__ . '/../includes/header.php';
       </div>
     </div>
     
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <a href="?status=all" class="btn <?= $filterStatus==='all'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Semua</a>
-      <a href="?status=approved" class="btn <?= $filterStatus==='approved'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Approved (<?= $counts['approved'] ?? 0 ?>)</a>
-      <a href="?status=pending" class="btn <?= $filterStatus==='pending'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Pending (<?= $counts['pending'] ?? 0 ?>)</a>
-      <a href="?status=nonaktif" class="btn <?= $filterStatus==='nonaktif'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Nonaktif (<?= $counts['nonaktif'] ?? 0 ?>)</a>
-      <a href="?status=rejected" class="btn <?= $filterStatus==='rejected'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Ditolak (<?= $counts['rejected'] ?? 0 ?>)</a>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+      <form method="get" action="<?= BASE_URL ?>/admin/users_approve.php" style="display:flex;gap:6px;align-items:center;margin:0;">
+        <input type="hidden" name="status" value="<?= htmlspecialchars($filterStatus) ?>">
+        <input type="text" name="q" value="<?= htmlspecialchars($q) ?>" placeholder="Cari nama / NRP..." style="padding:5px 10px;font-size:12px;width:150px;margin:0;">
+        <button type="submit" class="btn btn-outline" style="padding:5px 10px;font-size:12px;">🔍</button>
+        <?php if ($q !== ''): ?>
+          <a href="?status=<?= urlencode($filterStatus) ?>" class="btn-ghost" style="padding:5px 8px;font-size:12px;" title="Reset Cari">&times;</a>
+        <?php endif; ?>
+      </form>
+      <a href="?status=all<?= $q ? '&q=' . urlencode($q) : '' ?>" class="btn <?= $filterStatus==='all'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Semua</a>
+      <a href="?status=approved<?= $q ? '&q=' . urlencode($q) : '' ?>" class="btn <?= $filterStatus==='approved'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Approved (<?= $counts['approved'] ?? 0 ?>)</a>
+      <a href="?status=pending<?= $q ? '&q=' . urlencode($q) : '' ?>" class="btn <?= $filterStatus==='pending'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Pending (<?= $counts['pending'] ?? 0 ?>)</a>
+      <a href="?status=nonaktif<?= $q ? '&q=' . urlencode($q) : '' ?>" class="btn <?= $filterStatus==='nonaktif'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Nonaktif (<?= $counts['nonaktif'] ?? 0 ?>)</a>
+      <a href="?status=rejected<?= $q ? '&q=' . urlencode($q) : '' ?>" class="btn <?= $filterStatus==='rejected'?'':'btn-outline' ?>" style="padding:6px 12px;font-size:12px;">Ditolak (<?= $counts['rejected'] ?? 0 ?>)</a>
     </div>
   </div>
 
@@ -209,6 +244,8 @@ include __DIR__ . '/../includes/header.php';
       <?php endforeach; ?>
     </tbody>
   </table>
+
+  <?= render_pagination($page, $totalPagesAll, $totalRecordsAll, $perPage, $_GET, [10, 25, 50, 100]) ?>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

@@ -23,7 +23,7 @@ $stmtCount->execute($countParams);
 $totalRecords = (int)$stmtCount->fetchColumn();
 
 // Parameter Paginasi
-$perPage = 25;
+$perPage = max(10, min(100, (int)($_GET['per_page'] ?? 25)));
 $totalPages = max(1, (int)ceil($totalRecords / $perPage));
 $page = max(1, min($totalPages, (int)($_GET['page'] ?? 1)));
 $offset = ($page - 1) * $perPage;
@@ -127,27 +127,8 @@ include __DIR__ . '/../includes/header.php';
     </tbody>
   </table>
 
-  <!-- Kontrol Paginasi -->
-  <?php if ($totalPages > 1): ?>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap;gap:8px;">
-    <div style="font-size:12.5px;color:var(--text-dim);">
-      Menampilkan <?= count($list) ?> dari <strong><?= $totalRecords ?></strong> personel (Halaman <?= $page ?> dari <?= $totalPages ?>)
-    </div>
-    <div style="display:flex;gap:6px;">
-      <?php if ($page > 1): ?>
-        <a href="?q=<?= urlencode($q) ?>&satuan=<?= urlencode($satuan) ?>&page=<?= $page - 1 ?>" class="btn btn-outline" style="padding:4px 10px;font-size:12px;">&laquo; Sebelumnya</a>
-      <?php endif; ?>
-      <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
-        <a href="?q=<?= urlencode($q) ?>&satuan=<?= urlencode($satuan) ?>&page=<?= $i ?>" class="btn <?= $i === $page ? '' : 'btn-outline' ?>" style="padding:4px 10px;font-size:12px;min-width:32px;text-align:center;">
-          <?= $i ?>
-        </a>
-      <?php endfor; ?>
-      <?php if ($page < $totalPages): ?>
-        <a href="?q=<?= urlencode($q) ?>&satuan=<?= urlencode($satuan) ?>&page=<?= $page + 1 ?>" class="btn btn-outline" style="padding:4px 10px;font-size:12px;">Berikutnya &raquo;</a>
-      <?php endif; ?>
-    </div>
-  </div>
-  <?php endif; ?>
+  <!-- Kontrol Paginasi Optimal -->
+  <?= render_pagination($page, $totalPages, $totalRecords, $perPage, $_GET, [10, 25, 50, 100]) ?>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

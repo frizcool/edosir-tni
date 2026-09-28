@@ -5,7 +5,7 @@ require_admin();
 $aktivitasFilter = trim($_GET['aktivitas'] ?? '');
 $q = trim($_GET['q'] ?? '');
 $page = max(1, (int)($_GET['page'] ?? 1));
-$limit = 30;
+$limit = max(10, min(100, (int)($_GET['per_page'] ?? 30)));
 $offset = ($page - 1) * $limit;
 
 $sqlWhere = " WHERE 1=1";
@@ -152,22 +152,7 @@ include __DIR__ . '/../includes/header.php';
     </tbody>
   </table>
 
-  <!-- Paginasi -->
-  <?php if ($totalPages > 1): ?>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;gap:10px;">
-    <span style="font-size:12.5px;color:var(--text-dim);">
-      Halaman <?= $page ?> dari <?= $totalPages ?>
-    </span>
-    <div style="display:flex;gap:6px;">
-      <?php if ($page > 1): ?>
-        <a href="?page=<?= $page-1 ?>&aktivitas=<?= urlencode($aktivitasFilter) ?>&q=<?= urlencode($q) ?>" class="btn btn-outline" style="padding:5px 12px;font-size:12px;">&laquo; Sebelumnya</a>
-      <?php endif; ?>
-      <?php if ($page < $totalPages): ?>
-        <a href="?page=<?= $page+1 ?>&aktivitas=<?= urlencode($aktivitasFilter) ?>&q=<?= urlencode($q) ?>" class="btn btn-outline" style="padding:5px 12px;font-size:12px;">Berikutnya &raquo;</a>
-      <?php endif; ?>
-    </div>
-  </div>
-  <?php endif; ?>
+  <?= render_pagination($page, $totalPages, $totalRows, $limit, $_GET, [15, 30, 50, 100]) ?>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

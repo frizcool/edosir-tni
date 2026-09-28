@@ -802,3 +802,123 @@ function resolve_and_save_personel_relations($pdo, &$data) {
         }
     }
 }
+
+/**
+ * Helper untuk merender komponen paginasi yang elegan, responsif, dan optimal.
+ *
+ * @param int $page Halaman saat ini (1-indexed)
+ * @param int $totalPages Total seluruh halaman
+ * @param int $totalRecords Total jumlah baris data
+ * @param int $perPage Jumlah data per halaman
+ * @param array $queryParams Parameter query yang ingin dipertahankan (cth: $_GET)
+ * @param array $perPageOptions Opsi dropdown jumlah data (cth: [10, 25, 50, 100])
+ * @return string HTML blok paginasi
+ */
+function render_pagination($page, $totalPages, $totalRecords = 0, $perPage = 25, array $queryParams = [], array $perPageOptions = [10, 25, 50, 100]) {
+    if ($totalRecords <= 0 && $totalPages <= 1) {
+        return '';
+    }
+
+    $page = max(1, min($totalPages, (int)$page));
+    $start = $totalRecords > 0 ? (($page - 1) * $perPage) + 1 : 0;
+    $end = min($totalRecords, $page * $perPage);
+
+    // Fungsi kecil pembangun URL dengan parameter bersih
+    $buildUrl = function($targetPage, $targetPerPage = null) use ($queryParams, $perPage) {
+        $p = $queryParams;
+        $p['page'] = $targetPage;
+        if ($targetPerPage !== null) {
+            $p['per_page'] = $targetPerPage;
+        } elseif (isset($queryParams['per_page'])) {
+            $p['per_page'] = $queryParams['per_page'];
+        } elseif ($perPage !== 25) {
+            $p['per_page'] = $perPage;
+        }
+        return '?' . http_build_query($p);
+    };
+
+    ob_start();
+    ?>
+    <div class="pagination-wrap">
+      <div class="pagination-info">
+        <div>
+          Menampilkan <strong><?= number_format($start) ?></strong> &ndash; <strong><?= number_format($end) ?></strong> dari <strong><?= number_format($totalRecords) ?></strong> data
+          <?php if ($totalPages > 1): ?>
+            <span style="color:var(--text-dim);margin-left:4px;">(Hal. <?= $page ?> / <?= $totalPages ?>)</span>
+          <?php endif; ?>
+        </div>
+        <?php if (!empty($perPageOptions)): ?>
+          <div class="pagination-perpage">
+            <label for="perPageSel" style="margin:0;font-size:12px;color:var(--text-dim);">Tampilkan:</label>
+            <select id="perPageSel" onchange="location.href=this.value;">
+              <?php foreach ($perPageOptions as $opt): ?>
+                <option value="<?= htmlspecialchars($buildUrl(1, $opt)) ?>" <?= (int)$perPage === (int)$opt ? 'selected' : '' ?>>
+                  <?= $opt ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        <?php endif; ?>
+      </div>
+
+      <?php if ($totalPages > 1): ?>
+        <nav class="pagination-nav" aria-label="Navigasi Halaman">
+          <!-- Tombol Pertama & Sebelumnya -->
+          <?php if ($page > 1): ?>
+            <a href="<?= htmlspecialchars($buildUrl(1)) ?>" class="page-btn" title="Halaman Pertama">&laquo;&laquo;</a>
+            <a href="<?= htmlspecialchars($buildUrl($page - 1)) ?>" class="page-btn" title="Halaman Sebelumnya">&laquo;</a>
+          <?php else: ?>
+            <span class="page-btn disabled">&laquo;&laquo;</span>
+            <span class="page-btn disabled">&laquo;</span>
+          <?php endif; ?>
+
+          <!-- Angka Halaman dengan Windowing dan Ellipsis -->
+          <?php
+          $range = 2; // radius kiri dan kanan halaman aktif
+          $startPage = max(1, $page - $range);
+          $endPage = min($totalPages, $page + $range);
+
+          if ($page <= 3) {
+              $endPage = min($totalPages, 1 + ($range * 2));
+          }
+          if ($page >= $totalPages - 2) {
+              $startPage = max(1, $totalPages - ($range * 2));
+          }
+
+          if ($startPage > 1) {
+              echo '<a href="' . htmlspecialchars($buildUrl(1)) . '" class="page-btn">1</a>';
+              if ($startPage > 2) {
+                  echo '<span class="page-ellipsis">&hellip;</span>';
+              }
+          }
+
+          for ($i = $startPage; $i <= $endPage; $i++) {
+              if ($i === $page) {
+                  echo '<span class="page-btn active" aria-current="page">' . $i . '</span>';
+              } else {
+                  echo '<a href="' . htmlspecialchars($buildUrl($i)) . '" class="page-btn">' . $i . '</a>';
+              }
+          }
+
+          if ($endPage < $totalPages) {
+              if ($endPage < $totalPages - 1) {
+                  echo '<span class="page-ellipsis">&hellip;</span>';
+              }
+              echo '<a href="' . htmlspecialchars($buildUrl($totalPages)) . '" class="page-btn">' . $totalPages . '</a>';
+          }
+          ?>
+
+          <!-- Tombol Berikutnya & Terakhir -->
+          <?php if ($page < $totalPages): ?>
+            <a href="<?= htmlspecialchars($buildUrl($page + 1)) ?>" class="page-btn" title="Halaman Berikutnya">&raquo;</a>
+            <a href="<?= htmlspecialchars($buildUrl($totalPages)) ?>" class="page-btn" title="Halaman Terakhir">&raquo;&raquo;</a>
+          <?php else: ?>
+            <span class="page-btn disabled">&raquo;</span>
+            <span class="page-btn disabled">&raquo;&raquo;</span>
+          <?php endif; ?>
+        </nav>
+      <?php endif; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+}

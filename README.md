@@ -6,8 +6,14 @@
 - **33 jenis Dosir wajib** (sesuai daftar baku) dengan penamaan file otomatis `NRP_KODE[abjad].pdf`
   dan folder fisik `uploads/FOLDER 01` s.d. `FOLDER 33`. Berkas kedua dst pada jenis dosir yang sama
   otomatis diberi akhiran abjad (a, b, c, ...).
-- **Verifikasi berkas oleh admin** — setiap berkas berstatus `pending → approved/rejected`. Saat disetujui,
-  sistem otomatis menambahkan **watermark "TERVERIFIKASI"** pada PDF (butuh library FPDI+TCPDF, lihat §4).
+- **Verifikasi berkas & TTE resmi** — setiap berkas berstatus `pending → approved/rejected`. Saat disetujui,
+  sistem membersihkan watermark awal dan membubuhkan **Sertifikasi Tanda Tangan Elektronik (TTE)**,
+  nomor kode unik, nilai hash SHA-256, dan QR Code keabsahan yang dapat dipindai publik (`verify.php`).
+- **Verifikasi massal (Bulk Verification)** — admin dapat memilih banyak berkas sekaligus menggunakan
+  checkbox dengan toolbar aksi massal untuk menyetujui (TTE massal) atau menolak massal dengan catatan dinas.
+- **Paginasi optimal & terpadu** — komponen paginasi pintar dengan windowing ellipsis, tombol batas,
+  pemilihan jumlah baris dinamis (per-page: 10, 25, 50, 100), dan retensi filter pencarian otomatis
+  pada seluruh tabel data (Daftar Personel, Verifikasi Dosir, Kontrol Akun, Log Aktivitas).
 - **Dashboard kelengkapan** — personel hanya melihat dosirnya sendiri beserta persentase kelengkapan
   (jumlah jenis dosir approved / 33). Admin melihat seluruh personel + rata-rata kelengkapan satuan.
 - **Prediksi pensiun otomatis**: Perwira 58 th, Bintara/Tamtama 56 th, PNS 60 th — dihitung dari tanggal lahir.
@@ -21,7 +27,8 @@
   dengan kop dan kolom tanda tangan.
 - **Backup data** — backup database (mysqldump) dan/atau seluruh berkas dosir (ZIP), tercatat di riwayat backup.
 - **Tema militer dark/light mode** — toggle tersimpan di localStorage pengguna.
-- **Log aktivitas** — seluruh aksi penting (login, upload, approval, verifikasi, backup) tercatat di `activity_log`.
+- **Log aktivitas & audit trail** — seluruh aksi penting (login, upload, approval, verifikasi tunggal/massal, backup)
+  tercatat secara lengkap di `activity_log`.
 
 ## 2. Struktur Folder
 ```
