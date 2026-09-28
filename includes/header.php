@@ -13,7 +13,7 @@ $pageTitle = $pageTitle ?? APP_NAME;
 <body>
 <?php if ($u): ?>
 <div class="app-shell">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebarNav">
     <div class="brand">
       <?php $appLogo = app_logo_url(); ?>
       <?php if ($appLogo): ?>
@@ -21,10 +21,11 @@ $pageTitle = $pageTitle ?? APP_NAME;
       <?php else: ?>
         <span class="brand-badge">★</span>
       <?php endif; ?>
-      <div>
+      <div style="flex:1;min-width:0;">
         <div class="brand-title"><?= htmlspecialchars(get_setting($pdo, 'app_brand_title', 'TRISULA')) ?></div>
         <div class="brand-sub"><?= htmlspecialchars(get_setting($pdo, 'app_brand_sub', 'TNI AD')) ?></div>
       </div>
+      <button type="button" class="sidebar-close-btn" id="sidebarClose" aria-label="Tutup Menu">&times;</button>
     </div>
     <nav class="nav">
       <?php 
@@ -60,6 +61,7 @@ $pageTitle = $pageTitle ?? APP_NAME;
         <a href="<?= BASE_URL ?>/admin/bulk_download.php" class="nav-link<?= $isActive('bulk_download.php') ?>">Unduh Massal</a>
         <a href="<?= BASE_URL ?>/admin/report.php" class="nav-link<?= $isActive('report.php') ?>">Laporan</a>
         <a href="<?= BASE_URL ?>/admin/dosir_master.php" class="nav-link<?= $isActive('dosir_master.php') ?>">Master Dosir</a>
+        <a href="<?= BASE_URL ?>/admin/utility.php" class="nav-link<?= $isActive('utility.php') ?>">Utilitas Master</a>
         <a href="<?= BASE_URL ?>/admin/activity_log.php" class="nav-link<?= $isActive('activity_log.php') ?>">Log Aktivitas</a>
         <a href="<?= BASE_URL ?>/admin/backup.php" class="nav-link<?= $isActive('backup.php') ?>">Backup Data</a>
         <a href="<?= BASE_URL ?>/admin/settings.php" class="nav-link<?= $isActive('settings.php') ?>">Pengaturan</a>
@@ -71,16 +73,25 @@ $pageTitle = $pageTitle ?? APP_NAME;
     </div>
   </aside>
 
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
   <div class="main">
     <header class="topbar">
-      <div class="topbar-title"><?= htmlspecialchars($pageTitle) ?></div>
+      <div class="topbar-left">
+        <button type="button" class="sidebar-toggle-btn" id="sidebarToggle" aria-label="Buka Menu Navigasi">
+          <span class="toggle-bar"></span>
+          <span class="toggle-bar"></span>
+          <span class="toggle-bar"></span>
+        </button>
+        <div class="topbar-title"><?= htmlspecialchars($pageTitle) ?></div>
+      </div>
       <div class="topbar-user">
         <?php $userFotoUrl = foto_url($u['foto'] ?? ''); ?>
         <?php if ($userFotoUrl): ?>
           <img src="<?= $userFotoUrl ?>" alt="Foto" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid var(--gold);box-shadow:0 2px 6px rgba(0,0,0,.2);">
         <?php endif; ?>
         <span class="rank"><?= htmlspecialchars($u['pangkat'] ?? strtoupper($u['role'])) ?></span>
-        <strong><?= htmlspecialchars($u['nama'] ?? $u['username']) ?></strong>
+        <strong class="user-display-name"><?= htmlspecialchars($u['nama'] ?? $u['username']) ?></strong>
         <?php if (!empty($u['nrp'])): ?><span class="nrp"><?= htmlspecialchars($u['nrp']) ?></span><?php endif; ?>
       </div>
     </header>

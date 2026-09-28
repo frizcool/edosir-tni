@@ -13,10 +13,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     $nrp           = trim($_POST['nrp'] ?? '');
     $nama          = trim($_POST['nama'] ?? '');
     $golongan      = $_POST['golongan'] ?? '';
-    $pangkat       = trim($_POST['pangkat'] ?? '');
-    $korp          = trim($_POST['korp'] ?? '');
-    $satuan        = trim($_POST['satuan'] ?? '');
-    $kotama        = trim($_POST['kotama'] ?? '');
     $jabatan       = trim($_POST['jabatan'] ?? '');
     $tmt_jabatan   = $_POST['tmt_jabatan'] ?: null;
     $tmt_pangkat   = $_POST['tmt_pangkat'] ?: null;
@@ -40,12 +36,44 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         } else {
             $pdo->beginTransaction();
             try {
-                $tmt_pensiun_proyeksi = hitung_proyeksi_pensiun($tanggal_lahir, $golongan);
+                $regData = [
+                    'nrp'           => $nrp,
+                    'nama'          => $nama,
+                    'golongan'      => $golongan,
+                    'pangkat_id'    => (int)($_POST['pangkat_id'] ?? 0) ?: null,
+                    'pangkat'       => trim($_POST['pangkat'] ?? ''),
+                    'korp_id'       => (int)($_POST['korp_id'] ?? 0) ?: null,
+                    'korp'          => trim($_POST['korp'] ?? ''),
+                    'kotama_id'     => (int)($_POST['kotama_id'] ?? 0) ?: null,
+                    'kotama'        => trim($_POST['kotama'] ?? ''),
+                    'satuan_id'     => (int)($_POST['satuan_id'] ?? 0) ?: null,
+                    'satuan'        => trim($_POST['satuan'] ?? ''),
+                    'jabatan'       => $jabatan,
+                    'tmt_jabatan'   => $tmt_jabatan,
+                    'tmt_pangkat'   => $tmt_pangkat,
+                    'tempat_lahir'  => $tempat_lahir,
+                    'tanggal_lahir' => $tanggal_lahir,
+                    'jenis_kelamin' => $jenis_kelamin,
+                    'tmt_pensiun_proyeksi' => hitung_proyeksi_pensiun($tanggal_lahir, $golongan),
+                ];
+
+                // Selesaikan relasi alami ke master data
+                resolve_and_save_personel_relations($pdo, $regData);
+
                 $stmt = $pdo->prepare(
-                    "INSERT INTO personel (nrp, nama, golongan, pangkat, korp, satuan, kotama, jabatan, tmt_jabatan, tmt_pangkat, tempat_lahir, tanggal_lahir, jenis_kelamin, tmt_pensiun_proyeksi)
-                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                    "INSERT INTO personel (nrp, nama, golongan, pangkat_id, pangkat, korp_id, korp, satuan_id, satuan, kotama_id, kotama, jabatan, tmt_jabatan, tmt_pangkat, tempat_lahir, tanggal_lahir, jenis_kelamin, tmt_pensiun_proyeksi)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
                 );
-                $stmt->execute([$nrp, $nama, $golongan, $pangkat, $korp, $satuan, $kotama, $jabatan, $tmt_jabatan, $tmt_pangkat, $tempat_lahir, $tanggal_lahir, $jenis_kelamin, $tmt_pensiun_proyeksi]);
+                $stmt->execute([
+                    $regData['nrp'], $regData['nama'], $regData['golongan'],
+                    $regData['pangkat_id'], $regData['pangkat'],
+                    $regData['korp_id'], $regData['korp'],
+                    $regData['satuan_id'], $regData['satuan'],
+                    $regData['kotama_id'], $regData['kotama'],
+                    $regData['jabatan'], $regData['tmt_jabatan'], $regData['tmt_pangkat'],
+                    $regData['tempat_lahir'], $regData['tanggal_lahir'], $regData['jenis_kelamin'],
+                    $regData['tmt_pensiun_proyeksi']
+                ]);
                 $personel_id = (int)$pdo->lastInsertId();
 
                 // Otomatis buatkan akun user: username = NRP, password = hash(NRP), status = pending
@@ -63,16 +91,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     }
 }
 
-$satuanSuggestions = get_distinct_personel_field($pdo, 'satuan');
-$kotamaSuggestions = get_distinct_personel_field($pdo, 'kotama');
-$korpSuggestions = get_distinct_personel_field($pdo, 'korp');
-$pangkatSuggestions = get_distinct_personel_field($pdo, 'pangkat');
+// Master Data Relasional untuk Pendaftaran
+$masterPangkatAll = get_master_pangkat_list($pdo);
+$masterKorpAll    = get_master_korp_list($pdo);
+$masterKotamaAll  = get_master_kotama_list($pdo);
+$masterSatuanAll  = get_master_satuan_list($pdo);
+
+$korpByKategori = [];
+foreach ($masterKorpAll as $mk) {
+    $korpByKategori[$mk['kategori']][] = $mk;
+}
 
 $pageTitle = 'Registrasi Personel';
 include __DIR__ . '/includes/header.php';
 ?>
 <div class="auth-wrap">
-  <div class="card auth-card" style="width:680px;">
+  <div class="card auth-card" style="max-width:760px;width:100%;margin:0 auto;">
     <div style="text-align:center;margin-bottom:16px;">
       <?php $appLogo = app_logo_url(); ?>
       <?php if ($appLogo): ?>
@@ -104,11 +138,11 @@ include __DIR__ . '/includes/header.php';
       <div class="grid grid-2">
         <div>
           <label>NRP *</label>
-          <input name="nrp" value="<?= htmlspecialchars($_POST['nrp'] ?? '') ?>" placeholder="Masukkan NRP (sebagai Username & Password)" required autofocus>
+          <input name="nrp" value="<?= htmlspecialchars($_POST['nrp'] ?? '') ?>" placeholder="NRP (sebagai Username & Password)" required autofocus>
         </div>
         <div>
-          <label>Golongan *</label>
-          <select name="golongan" required>
+          <label>Golongan Kepangkatan *</label>
+          <select name="golongan" id="golonganSelect" onchange="filterPangkatByGolongan()" required>
             <option value="">-- Pilih Golongan --</option>
             <?php foreach (['Perwira','Bintara','Tamtama','PNS'] as $g): ?>
               <option value="<?= $g ?>" <?= ($_POST['golongan'] ?? '') === $g ? 'selected' : '' ?>><?= $g ?></option>
@@ -119,20 +153,77 @@ include __DIR__ . '/includes/header.php';
           <label>Nama Lengkap *</label>
           <input name="nama" value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>" placeholder="Nama lengkap beserta gelar (jika ada)" required>
         </div>
+
         <div>
-          <label>Pangkat</label>
-          <input name="pangkat" list="pangkatList" value="<?= htmlspecialchars($_POST['pangkat'] ?? '') ?>" placeholder="cth: Kapten Inf / Serka / Praka">
-          <datalist id="pangkatList">
-            <?php foreach ($pangkatSuggestions as $opt): ?><option value="<?= htmlspecialchars($opt) ?>"><?php endforeach; ?>
-          </datalist>
+          <label>Pangkat Resmi</label>
+          <select name="pangkat_id" id="pangkatSelect" onchange="syncPangkatFields()">
+            <option value="">-- Pilih Pangkat --</option>
+            <?php foreach ($masterPangkatAll as $pkt): ?>
+              <option value="<?= $pkt['id'] ?>"
+                      data-golongan="<?= $pkt['golongan'] ?>"
+                      data-singkatan="<?= htmlspecialchars($pkt['singkatan']) ?>"
+                      <?= ((int)($_POST['pangkat_id'] ?? 0) === (int)$pkt['id']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($pkt['singkatan']) ?> - <?= htmlspecialchars($pkt['nama']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <input type="hidden" name="pangkat" id="pangkatText" value="<?= htmlspecialchars($_POST['pangkat'] ?? '') ?>">
         </div>
+
         <div>
-          <label>Korp</label>
-          <input name="korp" list="korpList" value="<?= htmlspecialchars($_POST['korp'] ?? '') ?>" placeholder="cth: Inf, Kav, Arm, Arh, Cba, dsb">
-          <datalist id="korpList">
-            <?php foreach ($korpSuggestions as $opt): ?><option value="<?= htmlspecialchars($opt) ?>"><?php endforeach; ?>
-          </datalist>
+          <label>Korp / Kecabangan</label>
+          <select name="korp_id" id="korpSelect" onchange="syncKorpFields()">
+            <option value="">-- Tanpa Korp / Non-Kecabangan (PNS) --</option>
+            <?php foreach ($korpByKategori as $kat => $korpGroup): ?>
+              <optgroup label="Kecabangan <?= htmlspecialchars($kat) ?>">
+                <?php foreach ($korpGroup as $krp): ?>
+                  <option value="<?= $krp['id'] ?>"
+                          data-kode="<?= htmlspecialchars($krp['kode']) ?>"
+                          <?= ((int)($_POST['korp_id'] ?? 0) === (int)$krp['id']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($krp['kode']) ?> - <?= htmlspecialchars($krp['nama']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </optgroup>
+            <?php endforeach; ?>
+          </select>
+          <input type="hidden" name="korp" id="korpText" value="<?= htmlspecialchars($_POST['korp'] ?? '') ?>">
         </div>
+
+        <div>
+          <label>Kotama / Balakpus Induk</label>
+          <select name="kotama_id" id="kotamaSelect" onchange="filterSatuanByKotama()">
+            <option value="">-- Pilih Kotama / Balakpus --</option>
+            <?php foreach ($masterKotamaAll as $kot): ?>
+              <option value="<?= $kot['id'] ?>"
+                      data-nama="<?= htmlspecialchars($kot['nama']) ?>"
+                      <?= ((int)($_POST['kotama_id'] ?? 0) === (int)$kot['id']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($kot['kode']) ?> - <?= htmlspecialchars($kot['nama']) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <input type="hidden" name="kotama" id="kotamaText" value="<?= htmlspecialchars($_POST['kotama'] ?? '') ?>">
+        </div>
+
+        <div>
+          <label>Satuan Organik</label>
+          <select name="satuan_id" id="satuanSelect" onchange="syncSatuanFields()">
+            <option value="">-- Pilih Satuan Organik --</option>
+            <?php foreach ($masterSatuanAll as $sat): ?>
+              <option value="<?= $sat['id'] ?>"
+                      data-kotama="<?= $sat['kotama_id'] ?>"
+                      data-nama="<?= htmlspecialchars($sat['nama']) ?>"
+                      <?= ((int)($_POST['satuan_id'] ?? 0) === (int)$sat['id']) ? 'selected' : '' ?>>
+                <?= htmlspecialchars($sat['nama']) ?>
+              </option>
+            <?php endforeach; ?>
+            <option value="custom" <?= (!empty($_POST['satuan']) && empty($_POST['satuan_id'])) ? 'selected' : '' ?>>-- Satuan Lainnya / Tulis Manual --</option>
+          </select>
+        </div>
+
+        <div style="grid-column:1/-1;">
+          <input name="satuan" id="satuanCustomInput" value="<?= htmlspecialchars($_POST['satuan'] ?? '') ?>" placeholder="Tuliskan nama satuan bila tidak ada di daftar..." style="<?= (!empty($_POST['satuan']) && empty($_POST['satuan_id'])) ? '' : 'display:none;' ?>">
+        </div>
+
         <div>
           <label>Jenis Kelamin</label>
           <select name="jenis_kelamin">
@@ -140,20 +231,7 @@ include __DIR__ . '/includes/header.php';
             <option value="P" <?= ($_POST['jenis_kelamin'] ?? '') === 'P' ? 'selected' : '' ?>>Perempuan</option>
           </select>
         </div>
-        <div>
-          <label>Satuan</label>
-          <input name="satuan" list="satuanList" value="<?= htmlspecialchars($_POST['satuan'] ?? '') ?>" placeholder="cth: Yonif 403 / Kodim 0734">
-          <datalist id="satuanList">
-            <?php foreach ($satuanSuggestions as $opt): ?><option value="<?= htmlspecialchars($opt) ?>"><?php endforeach; ?>
-          </datalist>
-        </div>
-        <div>
-          <label>Kotama / Balakpus</label>
-          <input name="kotama" list="kotamaList" value="<?= htmlspecialchars($_POST['kotama'] ?? '') ?>" placeholder="cth: Kodam IV/Diponegoro">
-          <datalist id="kotamaList">
-            <?php foreach ($kotamaSuggestions as $opt): ?><option value="<?= htmlspecialchars($opt) ?>"><?php endforeach; ?>
-          </datalist>
-        </div>
+
         <div>
           <label>Jabatan</label>
           <input name="jabatan" value="<?= htmlspecialchars($_POST['jabatan'] ?? '') ?>" placeholder="cth: Pasi Intel / Danramil">
@@ -168,14 +246,14 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div>
           <label>Tempat Lahir</label>
-          <input name="tempat_lahir" value="<?= htmlspecialchars($_POST['tempat_lahir'] ?? '') ?>" placeholder="cth: Jakarta / Surabaya">
+          <input name="tempat_lahir" value="<?= htmlspecialchars($_POST['tempat_lahir'] ?? '') ?>" placeholder="cth: Jakarta / Bandung">
         </div>
         <div>
           <label>Tanggal Lahir</label>
           <input type="date" name="tanggal_lahir" value="<?= htmlspecialchars($_POST['tanggal_lahir'] ?? '') ?>">
         </div>
       </div>
-      <button type="submit" class="btn" style="width:100%;margin-top:10px;">Daftar Personel</button>
+      <button type="submit" class="btn" style="width:100%;margin-top:16px;padding:12px;">Daftar Personel</button>
     </form>
     <p style="text-align:center;font-size:13px;margin-top:16px;color:var(--text-dim);">
       Sudah punya akun yang diverifikasi? <a href="<?= BASE_URL ?>/login.php" style="color:var(--gold);font-weight:600;">Masuk di sini</a>
@@ -183,4 +261,110 @@ include __DIR__ . '/includes/header.php';
     <?php endif; ?>
   </div>
 </div>
+
+<script>
+function filterPangkatByGolongan() {
+  var gol = document.getElementById('golonganSelect').value;
+  var sel = document.getElementById('pangkatSelect');
+  var opts = sel.querySelectorAll('option');
+
+  var currentSelectedValid = false;
+  opts.forEach(function(opt) {
+    if (!opt.value) return;
+    var optGol = opt.getAttribute('data-golongan');
+    if (!gol || optGol === gol) {
+      opt.style.display = '';
+      if (opt.selected) currentSelectedValid = true;
+    } else {
+      opt.style.display = 'none';
+      if (opt.selected) opt.selected = false;
+    }
+  });
+
+  if (!currentSelectedValid && gol) {
+    for (var i = 0; i < opts.length; i++) {
+      if (opts[i].value && opts[i].getAttribute('data-golongan') === gol) {
+        opts[i].selected = true;
+        break;
+      }
+    }
+  }
+  syncPangkatFields();
+}
+
+function syncPangkatFields() {
+  var sel = document.getElementById('pangkatSelect');
+  var opt = sel.options[sel.selectedIndex];
+  if (opt && opt.value) {
+    document.getElementById('pangkatText').value = opt.getAttribute('data-singkatan') || '';
+  }
+}
+
+function syncKorpFields() {
+  var sel = document.getElementById('korpSelect');
+  var opt = sel.options[sel.selectedIndex];
+  if (opt && opt.value) {
+    document.getElementById('korpText').value = opt.getAttribute('data-kode') || '';
+  } else {
+    document.getElementById('korpText').value = '';
+  }
+}
+
+function filterSatuanByKotama() {
+  var kotamaId = document.getElementById('kotamaSelect').value;
+  var selKot = document.getElementById('kotamaSelect');
+  var optKot = selKot.options[selKot.selectedIndex];
+  if (optKot && optKot.value) {
+    document.getElementById('kotamaText').value = optKot.getAttribute('data-nama') || '';
+  } else {
+    document.getElementById('kotamaText').value = '';
+  }
+
+  var selSat = document.getElementById('satuanSelect');
+  var optsSat = selSat.querySelectorAll('option');
+
+  optsSat.forEach(function(opt) {
+    if (!opt.value || opt.value === 'custom') return;
+    var satKot = opt.getAttribute('data-kotama');
+    if (!kotamaId || satKot === kotamaId || !satKot) {
+      opt.style.display = '';
+    } else {
+      opt.style.display = 'none';
+    }
+  });
+}
+
+function syncSatuanFields() {
+  var sel = document.getElementById('satuanSelect');
+  var opt = sel.options[sel.selectedIndex];
+  var customInput = document.getElementById('satuanCustomInput');
+
+  if (opt && opt.value === 'custom') {
+    customInput.style.display = '';
+    customInput.focus();
+  } else if (opt && opt.value) {
+    customInput.style.display = 'none';
+    customInput.value = opt.getAttribute('data-nama') || '';
+    var satKot = opt.getAttribute('data-kotama');
+    if (satKot) {
+      var kotSel = document.getElementById('kotamaSelect');
+      if (!kotSel.value || kotSel.value !== satKot) {
+        kotSel.value = satKot;
+        filterSatuanByKotama();
+      }
+    }
+  } else {
+    customInput.style.display = 'none';
+    customInput.value = '';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var gol = document.getElementById('golonganSelect').value;
+  if (gol) filterPangkatByGolongan();
+  var kot = document.getElementById('kotamaSelect').value;
+  if (kot) filterSatuanByKotama();
+});
+</script>
+
 <?php include __DIR__ . '/includes/footer.php'; ?>

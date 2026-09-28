@@ -5,6 +5,8 @@
 CREATE DATABASE IF NOT EXISTS edosir_tni CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE edosir_tni;
 
+SET foreign_key_checks = 0;
+
 -- ---------------------------------------------------------------------
 -- 1. MASTER 33 JENIS DOSIR BAKU TNI AD (Tabel Referensi Mandiri)
 -- ---------------------------------------------------------------------
@@ -52,16 +54,163 @@ INSERT INTO dosir_master (kode, nama_dosir, urutan) VALUES
 ON DUPLICATE KEY UPDATE nama_dosir = VALUES(nama_dosir), urutan = VALUES(urutan);
 
 -- ---------------------------------------------------------------------
--- 2. PERSONEL (Entitas Pokok Prajurit & PNS TNI AD)
+-- 2. MASTER KOTAMA & BALAKPUS (Komando Utama & Badan Pelaksana Pusat)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS master_kotama (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  kode VARCHAR(30) UNIQUE NOT NULL,
+  nama VARCHAR(150) NOT NULL,
+  tipe ENUM('Kotamaops', 'Kotamabin', 'Balakpus', 'Mabesad') NOT NULL DEFAULT 'Kotamabin',
+  urutan INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO master_kotama (kode, nama, tipe, urutan) VALUES
+('MABESAD', 'Mabes TNI AD', 'Mabesad', 1),
+('KOSTRAD', 'Komando Cadangan Strategis AD (Kostrad)', 'Kotamaops', 2),
+('KOPASSUS', 'Komando Pasukan Khusus (Kopassus)', 'Kotamaops', 3),
+('KODIKLATAD', 'Kodiklat TNI AD', 'Kotamabin', 4),
+('PUSZIAD', 'Pusat Zeni TNI AD (Pusziad)', 'Balakpus', 5),
+('PUSPOMAD', 'Pusat Polisi Militer AD (Puspomad)', 'Balakpus', 6),
+('PUSHUBAD', 'Pusat Perhubungan AD (Pushubad)', 'Balakpus', 7),
+('PUSPALAD', 'Pusat Peralatan AD (Puspalad)', 'Balakpus', 8),
+('PUSBEKANGAD', 'Pusat Pembekalan Angkutan AD (Pusbekangad)', 'Balakpus', 9),
+('PUSKESAD', 'Pusat Kesehatan AD (Puskesad)', 'Balakpus', 10),
+('PUSPENERBAD', 'Pusat Penerbangan AD (Puspenerbad)', 'Balakpus', 11),
+('KODAM-I', 'Kodam I/Bukit Barisan', 'Kotamabin', 12),
+('KODAM-II', 'Kodam II/Sriwijaya', 'Kotamabin', 13),
+('KODAM-III', 'Kodam III/Siliwangi', 'Kotamabin', 14),
+('KODAM-IV', 'Kodam IV/Diponegoro', 'Kotamabin', 15),
+('KODAM-V', 'Kodam V/Brawijaya', 'Kotamabin', 16),
+('KODAM-VI', 'Kodam VI/Mulawarman', 'Kotamabin', 17),
+('KODAM-IX', 'Kodam IX/Udayana', 'Kotamabin', 18),
+('KODAM-XII', 'Kodam XII/Tanjungpura', 'Kotamabin', 19),
+('KODAM-XIII', 'Kodam XIII/Merdeka', 'Kotamabin', 20),
+('KODAM-XIV', 'Kodam XIV/Hasanuddin', 'Kotamabin', 21),
+('KODAM-XV', 'Kodam XV/Pattimura', 'Kotamabin', 22),
+('KODAM-XVII', 'Kodam XVII/Cenderawasih', 'Kotamabin', 23),
+('KODAM-XVIII', 'Kodam XVIII/Kasuari', 'Kotamabin', 24),
+('KODAM-JAYA', 'Kodam Jaya/Jayakarta', 'Kotamabin', 25),
+('KODAM-IM', 'Kodam Iskandar Muda', 'Kotamabin', 26)
+ON DUPLICATE KEY UPDATE nama = VALUES(nama), tipe = VALUES(tipe), urutan = VALUES(urutan);
+
+-- ---------------------------------------------------------------------
+-- 3. MASTER SATUAN ORGANIK (Relasi Natural Hierarkis ke Kotama)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS master_satuan (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  kotama_id INT NULL,
+  kode VARCHAR(50) UNIQUE NOT NULL,
+  nama VARCHAR(150) NOT NULL,
+  lokasi VARCHAR(100) NULL,
+  urutan INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_satuan_kotama FOREIGN KEY (kotama_id) 
+    REFERENCES master_kotama(id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 4. MASTER PANGKAT (Jenjang Baku & Batas Usia Pensiun TNI AD)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS master_pangkat (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  golongan ENUM('Perwira', 'Bintara', 'Tamtama', 'PNS') NOT NULL,
+  kode VARCHAR(30) UNIQUE NOT NULL,
+  nama VARCHAR(60) NOT NULL,
+  singkatan VARCHAR(20) NOT NULL,
+  urutan INT NOT NULL,
+  bup_usia INT NOT NULL DEFAULT 56,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO master_pangkat (golongan, kode, nama, singkatan, urutan, bup_usia) VALUES
+('Tamtama', 'PRADA', 'Prajurit Dua', 'Prada', 1, 56),
+('Tamtama', 'PRATU', 'Prajurit Satu', 'Pratu', 2, 56),
+('Tamtama', 'PRAKA', 'Prajurit Kepala', 'Praka', 3, 56),
+('Tamtama', 'KOPDA', 'Kopral Dua', 'Kopda', 4, 56),
+('Tamtama', 'KOPTU', 'Kopral Satu', 'Koptu', 5, 56),
+('Tamtama', 'KOPKA', 'Kopral Kepala', 'Kopka', 6, 56),
+('Bintara', 'SERDA', 'Sersan Dua', 'Serda', 7, 56),
+('Bintara', 'SERTU', 'Sersan Satu', 'Sertu', 8, 56),
+('Bintara', 'SERKA', 'Sersan Kepala', 'Serka', 9, 56),
+('Bintara', 'SERMA', 'Sersan Mayor', 'Serma', 10, 56),
+('Bintara', 'PELDA', 'Pembantu Letnan Dua', 'Pelda', 11, 56),
+('Bintara', 'PELTU', 'Pembantu Letnan Satu', 'Peltu', 12, 56),
+('Perwira', 'LETDA', 'Letnan Dua', 'Letda', 13, 58),
+('Perwira', 'LETTU', 'Letnan Satu', 'Lettu', 14, 58),
+('Perwira', 'KAPTEN', 'Kapten', 'Kapten', 15, 58),
+('Perwira', 'MAYOR', 'Mayor', 'Mayor', 16, 58),
+('Perwira', 'LETKOL', 'Letnan Kolonel', 'Letkol', 17, 58),
+('Perwira', 'KOLONEL', 'Kolonel', 'Kolonel', 18, 58),
+('Perwira', 'BRIGJEN', 'Brigadir Jenderal TNI', 'Brigjen TNI', 19, 58),
+('Perwira', 'MAYJEN', 'Mayor Jenderal TNI', 'Mayjen TNI', 20, 58),
+('Perwira', 'LETJEN', 'Letnan Jenderal TNI', 'Letjen TNI', 21, 58),
+('Perwira', 'JENDERAL', 'Jenderal TNI', 'Jenderal TNI', 22, 58),
+('PNS', 'PENGATUR_MUDA_IIA', 'Pengatur Muda (II/a)', 'II/a', 30, 60),
+('PNS', 'PENGATUR_MUDA_TK_IIB', 'Pengatur Muda Tk. I (II/b)', 'II/b', 31, 60),
+('PNS', 'PENGATUR_IIC', 'Pengatur (II/c)', 'II/c', 32, 60),
+('PNS', 'PENGATUR_TK_IID', 'Pengatur Tk. I (II/d)', 'II/d', 33, 60),
+('PNS', 'PENATA_MUDA_IIIA', 'Penata Muda (III/a)', 'III/a', 34, 60),
+('PNS', 'PENATA_MUDA_TK_IIIB', 'Penata Muda Tk. I (III/b)', 'III/b', 35, 60),
+('PNS', 'PENATA_IIIC', 'Penata (III/c)', 'III/c', 36, 60),
+('PNS', 'PENATA_TK_IIID', 'Penata Tk. I (III/d)', 'III/d', 37, 60),
+('PNS', 'PEMBINA_IVA', 'Pembina (IV/a)', 'IV/a', 38, 60),
+('PNS', 'PEMBINA_TK_IVB', 'Pembina Tk. I (IV/b)', 'IV/b', 39, 60),
+('PNS', 'PEMBINA_UTAMA_MUDA_IVC', 'Pembina Utama Muda (IV/c)', 'IV/c', 40, 60),
+('PNS', 'PEMBINA_UTAMA_MADYA_IVD', 'Pembina Utama Madya (IV/d)', 'IV/d', 41, 60),
+('PNS', 'PEMBINA_UTAMA_IVE', 'Pembina Utama (IV/e)', 'IV/e', 42, 60)
+ON DUPLICATE KEY UPDATE golongan = VALUES(golongan), nama = VALUES(nama), singkatan = VALUES(singkatan), urutan = VALUES(urutan), bup_usia = VALUES(bup_usia);
+
+-- ---------------------------------------------------------------------
+-- 5. MASTER KORP KECABANGAN TNI AD
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS master_korp (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  kode VARCHAR(15) UNIQUE NOT NULL,
+  nama VARCHAR(80) NOT NULL,
+  kategori ENUM('Tempur', 'Bantuan Tempur', 'Bantuan Administrasi', 'Penerbad') NOT NULL DEFAULT 'Tempur',
+  urutan INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO master_korp (kode, nama, kategori, urutan) VALUES
+('Inf', 'Infanteri', 'Tempur', 1),
+('Kav', 'Kavaleri', 'Tempur', 2),
+('Arm', 'Artileri Medan', 'Tempur', 3),
+('Arh', 'Artileri Pertahanan Udara', 'Tempur', 4),
+('Czi', 'Zeni', 'Bantuan Tempur', 5),
+('Chb', 'Perhubungan', 'Bantuan Tempur', 6),
+('Cpal', 'Peralatan', 'Bantuan Tempur', 7),
+('Cba', 'Pembekalan Angkutan', 'Bantuan Tempur', 8),
+('Cpm', 'Polisi Militer', 'Bantuan Administrasi', 9),
+('Caj', 'Ajudan Jenderal', 'Bantuan Administrasi', 10),
+('Ckm', 'Kesehatan Militer', 'Bantuan Administrasi', 11),
+('Cku', 'Keuangan', 'Bantuan Administrasi', 12),
+('Chk', 'Hukum', 'Bantuan Administrasi', 13),
+('Ctp', 'Topografi', 'Bantuan Administrasi', 14),
+('Cpn', 'Penerbangan Angkatan Darat', 'Penerbad', 15)
+ON DUPLICATE KEY UPDATE nama = VALUES(nama), kategori = VALUES(kategori), urutan = VALUES(urutan);
+
+-- ---------------------------------------------------------------------
+-- 6. PERSONEL (Entitas Pokok Prajurit & PNS TNI AD)
+--    Relasi Natural Relasional:
+--    - pangkat_id -> master_pangkat.id
+--    - korp_id    -> master_korp.id
+--    - satuan_id  -> master_satuan.id
+--    - kotama_id  -> master_kotama.id
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS personel (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nrp VARCHAR(20) UNIQUE NOT NULL,
   nama VARCHAR(120) NOT NULL,
   golongan ENUM('Perwira','Bintara','Tamtama','PNS') NOT NULL,
+  pangkat_id INT NULL,
   pangkat VARCHAR(50) NULL,
+  korp_id INT NULL,
   korp VARCHAR(50) NULL,
+  satuan_id INT NULL,
   satuan VARCHAR(150) NULL,
+  kotama_id INT NULL,
   kotama VARCHAR(150) NULL,
   jabatan VARCHAR(150) NULL,
   tmt_jabatan DATE NULL,
@@ -79,6 +228,10 @@ CREATE TABLE IF NOT EXISTS personel (
   tmt_pensiun_proyeksi DATE NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_personel_pangkat FOREIGN KEY (pangkat_id) REFERENCES master_pangkat(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_personel_korp FOREIGN KEY (korp_id) REFERENCES master_korp(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_personel_satuan FOREIGN KEY (satuan_id) REFERENCES master_satuan(id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_personel_kotama FOREIGN KEY (kotama_id) REFERENCES master_kotama(id) ON DELETE SET NULL ON UPDATE CASCADE,
   INDEX idx_personel_satuan (satuan),
   INDEX idx_personel_gol (golongan),
   INDEX idx_personel_status_dinas (status_dinas),
@@ -87,7 +240,7 @@ CREATE TABLE IF NOT EXISTS personel (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
--- 3. USERS (Akun Pengguna Sistem - Relasi Natural 1:1 ke Personel)
+-- 7. USERS (Akun Pengguna Sistem - Relasi Natural 1:1 ke Personel)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -108,12 +261,7 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
--- 4. DOSIR_FILES (Metadata Arsip Berkas Digital & Pengesahan TTE)
---    Relasi Natural:
---    - personel_id -> personel.id (Kepemilikan Berkas)
---    - dosir_kode  -> dosir_master.kode (Referensi 33 Jenis Dosir)
---    - uploaded_by -> users.id (Perekam Berkas)
---    - verified_by -> users.id (Pejabat Verifikator / TTE)
+-- 8. DOSIR_FILES (Metadata Arsip Berkas Digital & Pengesahan TTE)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS dosir_files (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -138,45 +286,46 @@ CREATE TABLE IF NOT EXISTS dosir_files (
   UNIQUE KEY uniq_dosir_slot (personel_id, dosir_kode, abjad),
   INDEX idx_dosir_status (status),
   INDEX idx_dosir_sigcode (signature_code),
-  CONSTRAINT fk_dosir_personel 
+  CONSTRAINT fk_files_personel 
     FOREIGN KEY (personel_id) REFERENCES personel(id) 
     ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_dosir_master 
+  CONSTRAINT fk_files_master 
     FOREIGN KEY (dosir_kode) REFERENCES dosir_master(kode) 
-    ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT fk_dosir_uploaded_by 
+    ON UPDATE CASCADE,
+  CONSTRAINT fk_files_uploader 
     FOREIGN KEY (uploaded_by) REFERENCES users(id) 
     ON DELETE SET NULL ON UPDATE CASCADE,
-  CONSTRAINT fk_dosir_verified_by 
+  CONSTRAINT fk_files_verifier 
     FOREIGN KEY (verified_by) REFERENCES users(id) 
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
--- 5. ACTIVITY_LOG (Audit Trail Aktivitas Sistem - Relasi ke Users)
+-- 9. ACTIVITY_LOG (Audit Trail Aktivitas Sistem)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS activity_log (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NULL,
-  aktivitas VARCHAR(150) NOT NULL,
-  keterangan TEXT NULL,
+  action VARCHAR(50) NOT NULL,
+  details TEXT NULL,
   ip_address VARCHAR(45) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_activity_created (created_at),
-  INDEX idx_activity_action (aktivitas),
+  INDEX idx_act_user (user_id),
+  INDEX idx_act_created (created_at),
+  INDEX idx_act_action (action),
   CONSTRAINT fk_activity_user 
     FOREIGN KEY (user_id) REFERENCES users(id) 
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
--- 6. BACKUP_LOG (Riwayat Pencadangan Pangkalan Data - Relasi ke Users)
+-- 10. BACKUP_LOG (Log Riwayat Cadangan Data)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS backup_log (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  file_name VARCHAR(255) NOT NULL,
-  size_bytes BIGINT DEFAULT 0,
-  jenis ENUM('database','files','full') DEFAULT 'full',
+  filename VARCHAR(150) NOT NULL,
+  filepath VARCHAR(255) NOT NULL,
+  filesize BIGINT NOT NULL,
   created_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_backup_user 
@@ -185,7 +334,7 @@ CREATE TABLE IF NOT EXISTS backup_log (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
--- 7. LOGIN_ATTEMPTS (Perekaman Percobaan Masuk - Proteksi Brute Force)
+-- 11. LOGIN_ATTEMPTS (Pencegahan Serangan Brute Force)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS login_attempts (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -197,7 +346,7 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
--- 8. SETTINGS (Pengaturan Konfigurasi & Identitas Sistem)
+-- 12. SETTINGS (Pengaturan Konfigurasi & Identitas Sistem)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS settings (
   setting_key VARCHAR(50) PRIMARY KEY,
@@ -228,3 +377,5 @@ ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);
 INSERT INTO users (username, password, role, status)
 SELECT 'admin', '$2y$10$92Iun1J0v8H4kU8s5m3zVeQyQwq2mQ0m3E4kzYQxK9c1yA9m4Kx1S', 'admin', 'approved'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
+
+SET foreign_key_checks = 1;

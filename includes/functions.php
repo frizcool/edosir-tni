@@ -490,5 +490,315 @@ function get_system_badge_counts($pdo, $user = null) {
     return $badges;
 }
 
+/**
+ * =====================================================================
+ * MASTER DATA RUJUKAN RELASIONAL ALAMI (NATURAL RDBMS) TNI AD
+ * Pangkat, Korp, Kotama, Satuan, & Penyelarasan Otomatis
+ * =====================================================================
+ */
 
+/** Ambil daftar master pangkat (opsional difilter berdasarkan golongan) */
+function get_master_pangkat_list($pdo, $golongan = null) {
+    try {
+        if ($golongan) {
+            $stmt = $pdo->prepare("SELECT * FROM master_pangkat WHERE golongan = ? ORDER BY urutan ASC");
+            $stmt->execute([$golongan]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        return $pdo->query("SELECT * FROM master_pangkat ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
+}
 
+/** Ambil daftar master korp/kecabangan resmi TNI AD */
+function get_master_korp_list($pdo, $kategori = null) {
+    try {
+        if ($kategori) {
+            $stmt = $pdo->prepare("SELECT * FROM master_korp WHERE kategori = ? ORDER BY urutan ASC, kode ASC");
+            $stmt->execute([$kategori]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        return $pdo->query("SELECT * FROM master_korp ORDER BY urutan ASC, kode ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/** Ambil daftar master Kotama/Balakpus TNI AD */
+function get_master_kotama_list($pdo) {
+    try {
+        return $pdo->query("SELECT * FROM master_kotama ORDER BY urutan ASC, nama ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/** Ambil daftar master Satuan organik (opsional difilter berdasarkan Kotama) */
+function get_master_satuan_list($pdo, $kotama_id = null) {
+    try {
+        if ($kotama_id) {
+            $stmt = $pdo->prepare("
+                SELECT s.*, k.nama as nama_kotama, k.kode as kode_kotama 
+                FROM master_satuan s 
+                LEFT JOIN master_kotama k ON k.id = s.kotama_id 
+                WHERE s.kotama_id = ? 
+                ORDER BY s.urutan ASC, s.nama ASC
+            ");
+            $stmt->execute([$kotama_id]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        return $pdo->query("
+            SELECT s.*, k.nama as nama_kotama, k.kode as kode_kotama 
+            FROM master_satuan s 
+            LEFT JOIN master_kotama k ON k.id = s.kotama_id 
+            ORDER BY s.urutan ASC, s.nama ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/** Sinkronisasi otomatis data string personel ke relasi Foreign Key master rujukan */
+function sync_personel_natural_relations($pdo) {
+    try {
+        $pangkatList = $pdo->query("SELECT id, singkatan, nama, kode FROM master_pangkat")->fetchAll(PDO::FETCH_ASSOC);
+        $korpList = $pdo->query("SELECT id, kode, nama FROM master_korp")->fetchAll(PDO::FETCH_ASSOC);
+        $kotamaList = $pdo->query("SELECT id, kode, nama FROM master_kotama")->fetchAll(PDO::FETCH_ASSOC);
+        $satuanList = $pdo->query("SELECT id, kode, nama, kotama_id FROM master_satuan")->fetchAll(PDO::FETCH_ASSOC);
+
+        $personelAll = $pdo->query("SELECT id, pangkat, korp, satuan, kotama, pangkat_id, korp_id, satuan_id, kotama_id FROM personel")->fetchAll(PDO::FETCH_ASSOC);
+
+        $upd = $pdo->prepare("UPDATE personel SET pangkat_id = ?, korp_id = ?, satuan_id = ?, kotama_id = ? WHERE id = ?");
+        $count = 0;
+
+        foreach ($personelAll as $p) {
+            $pktId = $p['pangkat_id'];
+            $krpId = $p['korp_id'];
+            $satId = $p['satuan_id'];
+            $kotId = $p['kotama_id'];
+
+            if (!$pktId && !empty($p['pangkat'])) {
+                foreach ($pangkatList as $mp) {
+                    if (strcasecmp($mp['singkatan'], trim($p['pangkat'])) === 0 || strcasecmp($mp['kode'], trim($p['pangkat'])) === 0 || stripos(trim($p['pangkat']), $mp['singkatan']) !== false) {
+                        $pktId = $mp['id'];
+                        break;
+                    }
+                }
+            }
+
+            if (!$krpId && !empty($p['korp'])) {
+                foreach ($korpList as $mk) {
+                    if (strcasecmp($mk['kode'], trim($p['korp'])) === 0 || strcasecmp($mk['nama'], trim($p['korp'])) === 0) {
+                        $krpId = $mk['id'];
+                        break;
+                    }
+                }
+            }
+
+            if (!$kotId && !empty($p['kotama'])) {
+                foreach ($kotamaList as $mkot) {
+                    if (strcasecmp($mkot['nama'], trim($p['kotama'])) === 0 || strcasecmp($mkot['kode'], trim($p['kotama'])) === 0 || stripos(trim($p['kotama']), $mkot['kode']) !== false) {
+                        $kotId = $mkot['id'];
+                        break;
+                    }
+                }
+            }
+
+            if (!$satId && !empty($p['satuan'])) {
+                foreach ($satuanList as $msat) {
+                    if (strcasecmp($msat['nama'], trim($p['satuan'])) === 0 || strcasecmp($msat['kode'], trim($p['satuan'])) === 0 || stripos(trim($p['satuan']), $msat['nama']) !== false) {
+                        $satId = $msat['id'];
+                        if (!$kotId && $msat['kotama_id']) {
+                            $kotId = $msat['kotama_id'];
+                        }
+                        break;
+                    }
+                }
+            }
+
+            $upd->execute([$pktId, $krpId, $satId, $kotId, $p['id']]);
+            $count++;
+        }
+        return $count;
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
+/**
+ * Harmonisasi teks standar personel dari data master rujukan
+ * Menyelaraskan ejaan string 'pangkat', 'korp', 'satuan', 'kotama' agar seragam dengan master
+ */
+function harmonize_personel_text_strings($pdo) {
+    try {
+        $count = 0;
+        // Harmonisasi pangkat
+        $pdo->query("
+            UPDATE personel p
+            JOIN master_pangkat mp ON mp.id = p.pangkat_id
+            SET p.pangkat = mp.singkatan
+            WHERE p.pangkat_id IS NOT NULL
+        ");
+        // Harmonisasi korp
+        $pdo->query("
+            UPDATE personel p
+            JOIN master_korp mk ON mk.id = p.korp_id
+            SET p.korp = mk.kode
+            WHERE p.korp_id IS NOT NULL
+        ");
+        // Harmonisasi kotama
+        $pdo->query("
+            UPDATE personel p
+            JOIN master_kotama mkot ON mkot.id = p.kotama_id
+            SET p.kotama = mkot.nama
+            WHERE p.kotama_id IS NOT NULL
+        ");
+        // Harmonisasi satuan
+        $pdo->query("
+            UPDATE personel p
+            JOIN master_satuan ms ON ms.id = p.satuan_id
+            SET p.satuan = ms.nama
+            WHERE p.satuan_id IS NOT NULL
+        ");
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Mengambil ringkasan statistik kesehatan relasi alami pangkalan data
+ */
+function get_natural_database_stats($pdo) {
+    $stats = [
+        'total_pangkat' => 0,
+        'total_korp' => 0,
+        'total_kotama' => 0,
+        'total_satuan' => 0,
+        'total_personel' => 0,
+        'personel_lengkap' => 0,
+        'personel_lengkap_pct' => 0,
+        'missing_pangkat' => 0,
+        'missing_korp' => 0,
+        'missing_satuan' => 0,
+        'missing_kotama' => 0,
+    ];
+    try {
+        $stats['total_pangkat'] = (int)$pdo->query("SELECT COUNT(*) FROM master_pangkat")->fetchColumn();
+        $stats['total_korp'] = (int)$pdo->query("SELECT COUNT(*) FROM master_korp")->fetchColumn();
+        $stats['total_kotama'] = (int)$pdo->query("SELECT COUNT(*) FROM master_kotama")->fetchColumn();
+        $stats['total_satuan'] = (int)$pdo->query("SELECT COUNT(*) FROM master_satuan")->fetchColumn();
+        $stats['total_personel'] = (int)$pdo->query("SELECT COUNT(*) FROM personel")->fetchColumn();
+
+        if ($stats['total_personel'] > 0) {
+            $stats['personel_lengkap'] = (int)$pdo->query("
+                SELECT COUNT(*) FROM personel 
+                WHERE pangkat_id IS NOT NULL 
+                  AND korp_id IS NOT NULL 
+                  AND satuan_id IS NOT NULL 
+                  AND kotama_id IS NOT NULL
+            ")->fetchColumn();
+            $stats['personel_lengkap_pct'] = round(($stats['personel_lengkap'] / $stats['total_personel']) * 100, 1);
+
+            $stats['missing_pangkat'] = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE pangkat_id IS NULL")->fetchColumn();
+            $stats['missing_korp']    = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE korp_id IS NULL")->fetchColumn();
+            $stats['missing_satuan']  = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE satuan_id IS NULL")->fetchColumn();
+            $stats['missing_kotama']  = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE kotama_id IS NULL")->fetchColumn();
+        }
+    } catch (Exception $e) {
+    }
+    return $stats;
+}
+
+/**
+ * Menyelesaikan dan menyinkronkan data ID dan teks relasi natural pada formulir personel
+ */
+function resolve_and_save_personel_relations($pdo, &$data) {
+    // 1. Pangkat
+    if (!empty($data['pangkat_id'])) {
+        $stmt = $pdo->prepare("SELECT singkatan, golongan FROM master_pangkat WHERE id = ?");
+        $stmt->execute([$data['pangkat_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['pangkat'] = $row['singkatan'];
+            if (empty($data['golongan'])) {
+                $data['golongan'] = $row['golongan'];
+            }
+        }
+    } elseif (!empty($data['pangkat'])) {
+        $stmt = $pdo->prepare("SELECT id, singkatan FROM master_pangkat WHERE singkatan = ? OR kode = ? LIMIT 1");
+        $stmt->execute([$data['pangkat'], $data['pangkat']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['pangkat_id'] = $row['id'];
+            $data['pangkat'] = $row['singkatan'];
+        }
+    }
+
+    // 2. Korp
+    if (!empty($data['korp_id'])) {
+        $stmt = $pdo->prepare("SELECT kode FROM master_korp WHERE id = ?");
+        $stmt->execute([$data['korp_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['korp'] = $row['kode'];
+        }
+    } elseif (!empty($data['korp'])) {
+        $stmt = $pdo->prepare("SELECT id, kode FROM master_korp WHERE kode = ? OR nama = ? LIMIT 1");
+        $stmt->execute([$data['korp'], $data['korp']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['korp_id'] = $row['id'];
+            $data['korp'] = $row['kode'];
+        }
+    }
+
+    // 3. Kotama
+    if (!empty($data['kotama_id'])) {
+        $stmt = $pdo->prepare("SELECT nama FROM master_kotama WHERE id = ?");
+        $stmt->execute([$data['kotama_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['kotama'] = $row['nama'];
+        }
+    } elseif (!empty($data['kotama'])) {
+        $stmt = $pdo->prepare("SELECT id, nama FROM master_kotama WHERE nama = ? OR kode = ? LIMIT 1");
+        $stmt->execute([$data['kotama'], $data['kotama']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['kotama_id'] = $row['id'];
+            $data['kotama'] = $row['nama'];
+        }
+    }
+
+    // 4. Satuan
+    if (!empty($data['satuan_id'])) {
+        $stmt = $pdo->prepare("SELECT nama, kotama_id FROM master_satuan WHERE id = ?");
+        $stmt->execute([$data['satuan_id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['satuan'] = $row['nama'];
+            if (empty($data['kotama_id']) && $row['kotama_id']) {
+                $data['kotama_id'] = $row['kotama_id'];
+                $stmtK = $pdo->prepare("SELECT nama FROM master_kotama WHERE id = ?");
+                $stmtK->execute([$row['kotama_id']]);
+                $data['kotama'] = $stmtK->fetchColumn() ?: $data['kotama'];
+            }
+        }
+    } elseif (!empty($data['satuan'])) {
+        $stmt = $pdo->prepare("SELECT id, nama, kotama_id FROM master_satuan WHERE nama = ? OR kode = ? LIMIT 1");
+        $stmt->execute([$data['satuan'], $data['satuan']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $data['satuan_id'] = $row['id'];
+            $data['satuan'] = $row['nama'];
+            if (empty($data['kotama_id']) && $row['kotama_id']) {
+                $data['kotama_id'] = $row['kotama_id'];
+                $stmtK = $pdo->prepare("SELECT nama FROM master_kotama WHERE id = ?");
+                $stmtK->execute([$row['kotama_id']]);
+                $data['kotama'] = $stmtK->fetchColumn() ?: $data['kotama'];
+            }
+        }
+    }
+}

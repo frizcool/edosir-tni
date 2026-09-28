@@ -4,7 +4,19 @@ require_admin();
 
 $admin = current_user();
 $id = (int) ($_GET['id'] ?? 0);
-$stmt = $pdo->prepare("SELECT * FROM personel WHERE id=?");
+$stmt = $pdo->prepare("
+    SELECT p.*,
+           mp.nama as pangkat_resmi, mp.bup_usia as pangkat_bup,
+           mk.nama as korp_nama, mk.kategori as korp_kategori,
+           ms.nama as satuan_nama, ms.lokasi as satuan_lokasi,
+           mkot.nama as kotama_nama, mkot.tipe as kotama_tipe
+    FROM personel p
+    LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+    LEFT JOIN master_korp mk ON mk.id = p.korp_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
+    LEFT JOIN master_kotama mkot ON mkot.id = p.kotama_id
+    WHERE p.id = ?
+");
 $stmt->execute([$id]);
 $p = $stmt->fetch();
 if (!$p) { set_flash('error', 'Data personel tidak ditemukan.'); redirect('/admin/personel_list.php'); }
@@ -102,12 +114,48 @@ include __DIR__ . '/../includes/header.php';
     <?php endif; ?>
 
     <table style="margin-top:16px;">
-      <tr><th>Golongan</th><td><?= htmlspecialchars($p['golongan']) ?></td><th>Korp</th><td><?= htmlspecialchars($p['korp'] ?? '-') ?></td></tr>
-      <tr><th>Satuan</th><td><?= htmlspecialchars($p['satuan'] ?? '-') ?></td><th>Kotama</th><td><?= htmlspecialchars($p['kotama'] ?? '-') ?></td></tr>
+      <tr>
+        <th>Golongan</th>
+        <td><span class="badge badge-info"><?= htmlspecialchars($p['golongan']) ?></span></td>
+        <th>Korp / Kecabangan</th>
+        <td>
+          <strong><?= htmlspecialchars($p['korp'] ?: '-') ?></strong>
+          <?php if (!empty($p['korp_nama'])): ?>
+            <span style="color:var(--text-dim);font-size:12px;">(<?= htmlspecialchars($p['korp_nama']) ?><?= !empty($p['korp_kategori']) ? ' &middot; ' . htmlspecialchars($p['korp_kategori']) : '' ?>)</span>
+          <?php endif; ?>
+        </td>
+      </tr>
+      <tr>
+        <th>Satuan Organik</th>
+        <td>
+          <strong><?= htmlspecialchars($p['satuan'] ?: '-') ?></strong>
+          <?php if (!empty($p['satuan_lokasi'])): ?>
+            <span style="color:var(--text-dim);font-size:12px;">(📍 <?= htmlspecialchars($p['satuan_lokasi']) ?>)</span>
+          <?php endif; ?>
+        </td>
+        <th>Kotama / Balakpus</th>
+        <td>
+          <strong><?= htmlspecialchars($p['kotama'] ?: '-') ?></strong>
+          <?php if (!empty($p['kotama_tipe'])): ?>
+            <span class="badge badge-nonaktif" style="font-size:10.5px;"><?= htmlspecialchars($p['kotama_tipe']) ?></span>
+          <?php endif; ?>
+        </td>
+      </tr>
+      <tr>
+        <th>Pangkat</th>
+        <td>
+          <strong><?= htmlspecialchars($p['pangkat'] ?: '-') ?></strong>
+          <?php if (!empty($p['pangkat_resmi'])): ?>
+            <span style="color:var(--text-dim);font-size:12px;">(<?= htmlspecialchars($p['pangkat_resmi']) ?><?= !empty($p['pangkat_bup']) ? ' &middot; BUP ' . $p['pangkat_bup'] . ' th' : '' ?>)</span>
+          <?php endif; ?>
+        </td>
+        <th>TMT Pangkat</th>
+        <td><?= fmt_tgl($p['tmt_pangkat']) ?></td>
+      </tr>
       <tr><th>Jabatan</th><td><?= htmlspecialchars($p['jabatan'] ?? '-') ?></td><th>TMT Jabatan</th><td><?= fmt_tgl($p['tmt_jabatan']) ?></td></tr>
-      <tr><th>TMT Pangkat</th><td><?= fmt_tgl($p['tmt_pangkat']) ?></td><th>Tgl Lahir</th><td><?= fmt_tgl($p['tanggal_lahir']) ?></td></tr>
-      <tr><th>No. HP</th><td><?= htmlspecialchars($p['no_hp'] ?? '-') ?></td><th>Status Dinas</th><td><?= htmlspecialchars($p['status_dinas']) ?></td></tr>
-      <tr><th>Email</th><td><?= htmlspecialchars($p['email'] ?? '-') ?></td><th>Tempat Lahir</th><td><?= htmlspecialchars($p['tempat_lahir'] ?? '-') ?></td></tr>
+      <tr><th>Tgl Lahir</th><td><?= fmt_tgl($p['tanggal_lahir']) ?></td><th>Tempat Lahir</th><td><?= htmlspecialchars($p['tempat_lahir'] ?? '-') ?></td></tr>
+      <tr><th>No. HP</th><td><?= htmlspecialchars($p['no_hp'] ?? '-') ?></td><th>Status Dinas</th><td><span class="badge <?= ($p['status_dinas'] ?? '') === 'Aktif' ? 'badge-approved' : 'badge-pending' ?>"><?= htmlspecialchars($p['status_dinas']) ?></span></td></tr>
+      <tr><th>Email</th><td><?= htmlspecialchars($p['email'] ?? '-') ?></td><th>Jenis Kelamin</th><td><?= ($p['jenis_kelamin'] ?? 'L') === 'L' ? 'Laki-laki' : 'Perempuan' ?></td></tr>
     </table>
   </div>
 
