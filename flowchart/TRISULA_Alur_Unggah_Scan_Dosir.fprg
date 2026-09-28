@@ -29,7 +29,7 @@
             <input variable="nrp"/>
 
             <output expression="&quot;DAFTAR 33 KATEGORI DOSIR ELEKTRONIK TNI AD:&quot;" newline="True"/>
-            <output expression="&quot;[01] Riwayat Hidup (RH)        [02] Akte Kelahiran           [03] Surat Nikah&quot;" newline="True"/>
+            <output expression="&quot;[01] Riwayat Hidup (RH)        [02] Akta Kelahiran           [03] Surat Nikah&quot;" newline="True"/>
             <output expression="&quot;[04] KTP &amp; KK Keluarga         [05] SK Kenaikan Pangkat      [06] SK Jabatan / Sprin&quot;" newline="True"/>
             <output expression="&quot;[07] Ijazah Diktuk/Dikbang     [08] Ijazah Umum SD-S1        [09] Riwayat Penugasan Ops&quot;" newline="True"/>
             <output expression="&quot;... s.d. [33] Dokumen Personel Lainnya&quot;" newline="True"/>

@@ -69,7 +69,7 @@
                                 </then>
                                 <else>
                                     <assign variable="jenisAksi" expression="&quot;AKSI_UMUM_PORTAL&quot;"/>
-                                    <assign variable="deskripsiLog" expression="&quot;Operasi reguler pengguna terotentikasi.&quot;"/>
+                                    <assign variable="deskripsiLog" expression="&quot;Operasi reguler pengguna terautentikasi.&quot;"/>
                                 </else>
                             </if>
                         </else>

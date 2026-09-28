@@ -11,7 +11,7 @@ RAHASIA
        (TATA KELOLA REKAM INFORMASI, SISTEMATIKA, & UNDUHAN LENGKAP ARSIP)
 
     Sistem Manajemen Dosir Elektronik, Digitalisasi 33 Berkas Baku Induk,
-    Verifikasi Berjenjang, dan Otentikasi Tanda Tangan Elektronik (TTE)
+    Verifikasi Berjenjang, dan Autentikasi Tanda Tangan Elektronik (TTE)
                      Personel Militer & PNS TNI AD
 
 --------------------------------------------------------------------------------
@@ -355,7 +355,7 @@ BAB IV   PENUTUP
           - Proses 2.0 : Pendaftaran & Persetujuan Akun Personel.
           - Proses 3.0 : Unggah, Scan Kamera, & Penataan Folder 33 Dosir.
           - Proses 4.0 : Verifikasi Berkas, Hashing SHA-256, & Pembubuhan TTE.
-          - Proses 5.0 : Layanan Otentikasi Keabsahan Dokumen Publik (QR Code).
+          - Proses 5.0 : Layanan Autentikasi Keabsahan Dokumen Publik (QR Code).
           - Proses 6.0 : Analitik Monitoring Kelengkapan, Pensiun, & Masa Jabatan.
           - Proses 7.0 : Pelaporan Cetak Dinas & Pengemasan Bulk ZIP.
 
@@ -646,9 +646,9 @@ BAB IV   PENUTUP
 │ KODE │ NAMA JENIS DOSIR (33 BAKU)    │ STATUS       │ AKSI DOKUMEN     │
 ├──────┼───────────────────────────────┼──────────────┼──────────────────┤
 │  01  │ SURAT LAMARAN                 │ APPROVED     │ [Lihat PDF TTE]  │
-│  02  │ AKTE KELAHIRAN YBS            │ APPROVED     │ [Lihat PDF TTE]  │
-│  05  │ IJASAH STTB (DIKUM)           │ PENDING      │ [Menunggu Admin] │
-│  16  │ IJASAH DIKMIL (DIKPAPROG)     │ KOSONG       │ [Unggah / Scan]  │
+│  02  │ AKTA KELAHIRAN YBS            │ APPROVED     │ [Lihat PDF TTE]  │
+│  05  │ IJAZAH STTB (DIKUM)           │ PENDING      │ [Menunggu Admin] │
+│  16  │ IJAZAH DIKMIL (DIKPAPROG)     │ KOSONG       │ [Unggah / Scan]  │
 │  29  │ KEP KENAIKAN PANGKAT          │ APPROVED     │ [Lihat PDF TTE]  │
 └──────┴───────────────────────────────┴──────────────┴──────────────────┘
 
@@ -657,7 +657,7 @@ BAB IV   PENUTUP
 │              ✓ DOKUMEN SAH & TERVERIFIKASI SECARA ELEKTRONIK           │
 │                  KODE REGISTRASI: TTE-TRISULA-202609-12-8A9F           │
 ├────────────────────────────────────────────────────────────────────────┤
-│ Jenis Dosir     : DOSIR 16 — IJASAH DIKMIL / SAR / TUK / CAB           │
+│ Jenis Dosir     : DOSIR 16 — IJAZAH DIKMIL / SAR / TUK / CAB           │
 │ Nama Personel   : Letda Czi Fris Wardani (NRP 211801234509)            │
 │ Pangkat/Satuan  : Letda Czi / Denzibang 3/I Jaya                       │
 │ Pejabat TTE     : Mayor Inf Hendra Pratama, S.I.P. (Kasi Pers)         │
@@ -728,11 +728,11 @@ function apply_digital_signature_pdf($rawMasterPath, $outputPath, array $signDat
             $w = $size['width'];
             $h = $size['height'];
 
-            // 1. Running Header Otentikasi Pada Seluruh Halaman
+            // 1. Running Header Autentikasi Pada Seluruh Halaman
             $pdf->SetAlpha(1.0);
             $pdf->SetFont('helvetica', '', 6.5);
             $pdf->SetTextColor(70, 95, 75);
-            $runningLine = "★ TRISULA TNI AD — DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: $code | HASH: $shortHash | $signDate WIB";
+            $runningLine = "E-DOSIR TNI AD - DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: $code | HASH: $shortHash | $signDate WIB";
             $pdf->SetXY(6, $h - 6.5);
             $pdf->Cell($w - 12, 4, $runningLine, 0, 0, 'L');
 

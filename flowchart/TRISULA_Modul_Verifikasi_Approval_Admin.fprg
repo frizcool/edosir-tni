@@ -34,7 +34,7 @@
             <input variable="fileId"/>
 
             <assign variable="namaPersonel" expression="&quot;Kopda Ahmad Zaelani&quot;"/>
-            <assign variable="jenisBerkas" expression="&quot;02 - Akte Kelahiran Anak Pertama&quot;"/>
+            <assign variable="jenisBerkas" expression="&quot;02 - Akta Kelahiran Anak Pertama&quot;"/>
 
             <output expression="&quot;Membuka Berkas ID: &quot; &amp; ToString(fileId) &amp; &quot; di Penampil PDF Terenkripsi...&quot;" newline="True"/>
             <output expression="&quot;Prajurit Pemilik: &quot; &amp; namaPersonel &amp; &quot; | Jenis: &quot; &amp; jenisBerkas" newline="True"/>
@@ -52,7 +52,7 @@
                 </else>
             </if>
 
-            <output expression="&quot;2. Apakah stempel/tanda tangan pejabat berwenang otentik? (ya/tidak):&quot;" newline="True"/>
+            <output expression="&quot;2. Apakah stempel/tanda tangan pejabat berwenang autentik? (ya/tidak):&quot;" newline="True"/>
             <input variable="inputPilihan"/>
             <if expression="inputPilihan == &quot;ya&quot; || inputPilihan == &quot;YA&quot; || inputPilihan == &quot;y&quot;">
                 <then>

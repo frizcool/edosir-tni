@@ -63,14 +63,14 @@ function apply_unverified_watermark($inputPath, $outputPath, $metaLabel = '', $w
             $pdf->SetTextColor(180, 40, 35);
             $pdf->SetFont('helvetica', 'B', 7);
             $pdf->SetXY(0, 0);
-            $pdf->Cell($w, 6, 'PERINGATAN: DOKUMEN INI BELUM DIVERIFIKASI / DALAM PENINJAUAN — BELUM MEMILIKI KEKUATAN HUKUM DINAS', 0, 0, 'C', true);
+            $pdf->Cell($w, 6, 'PERINGATAN: DOKUMEN INI BELUM DIVERIFIKASI / DALAM PENINJAUAN - BELUM MEMILIKI KEKUATAN HUKUM DINAS', 0, 0, 'C', true);
 
             // 3. Catatan Kaki Bawah
             $pdf->SetAlpha(0.9);
             $pdf->SetTextColor(130, 60, 50);
             $pdf->SetFont('helvetica', '', 7);
             $pdf->SetXY(5, $h - 7);
-            $footerText = 'TRISULA TNI AD — Status: Pending Approval. Menunggu persetujuan Administrator Satuan.' . ($metaLabel ? ' (' . $metaLabel . ')' : '');
+            $footerText = 'E-DOSIR TNI AD - Status: Menunggu Persetujuan Administrator Satuan.' . ($metaLabel ? ' (' . $metaLabel . ')' : '');
             $pdf->Cell($w - 10, 5, $footerText, 0, 0, 'L');
         }
 
@@ -139,11 +139,11 @@ function apply_digital_signature_pdf($rawMasterPath, $outputPath, array $signDat
             $w = $size['width'];
             $h = $size['height'];
 
-            // 1. Running Footer Otentikasi pada Setiap Halaman
+            // 1. Running Footer Autentikasi pada Setiap Halaman
             $pdf->SetAlpha(1.0);
             $pdf->SetFont('helvetica', '', 6.5);
             $pdf->SetTextColor(70, 95, 75); // Hijau tentara tenang
-            $runningLine = "★ TRISULA TNI AD — DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: $code | HASH: $shortHash | $signDate WIB";
+            $runningLine = "E-DOSIR TNI AD - DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: $code | HASH: $shortHash | $signDate WIB";
             $pdf->SetXY(6, $h - 6.5);
             $pdf->Cell($w - 12, 4, $runningLine, 0, 0, 'L');
 
@@ -229,7 +229,7 @@ function apply_digital_signature_pdf($rawMasterPath, $outputPath, array $signDat
                 $pdf->SetFont('helvetica', 'I', 4.8);
                 $pdf->SetTextColor(110, 125, 115);
                 $pdf->SetXY($boxX + 3, $boxY + $boxH - 3.8);
-                $pdf->Cell($boxW - 6, 3, 'Scan QR Code untuk memverifikasi keabsahan dokumen di Portal TRISULA', 0, 0, 'C');
+                $pdf->Cell($boxW - 6, 3, 'Pindai kode QR untuk memverifikasi keabsahan dokumen di Portal E-DOSIR TNI AD', 0, 0, 'C');
             }
         }
 

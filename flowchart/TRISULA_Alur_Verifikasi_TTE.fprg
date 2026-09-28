@@ -56,7 +56,7 @@
                 <else>
                     <if expression="keputusan == &quot;approve&quot; || keputusan == &quot;APPROVE&quot;">
                         <then>
-                            <comment text="Proses Otentikasi Tanda Tangan Elektronik (TTE) Resmi TNI AD"/>
+                            <comment text="Proses Autentikasi Tanda Tangan Elektronik (TTE) Resmi TNI AD"/>
                             <output expression="&quot;Mengambil berkas master bersih dari direktori fisik...&quot;" newline="True"/>
                             
                             <comment text="Kalkulasi nilai hash kriptografi SHA-256 berkas"/>

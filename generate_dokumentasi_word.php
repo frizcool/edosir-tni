@@ -114,7 +114,7 @@ $coverSection->addTextBreak(1);
 $coverSection->addText('TRISULA TNI AD', ['name' => 'Times New Roman', 'size' => 20, 'bold' => true, 'color' => '224222'], $pCenter);
 $coverSection->addText('(TATA KELOLA REKAM INFORMASI, SISTEMATIKA, & UNDUHAN LENGKAP ARSIP)', $fDocSub, $pCenter);
 $coverSection->addTextBreak(1);
-$coverSection->addText('Sistem Dosir Elektronik, Digitalisasi 33 Berkas Baku Induk, Verifikasi Berjenjang, dan Otentikasi Tanda Tangan Elektronik (TTE) Personel Militer & PNS TNI AD', ['name' => 'Times New Roman', 'size' => 11, 'italic' => true], $pCenter);
+$coverSection->addText('Sistem Dosir Elektronik, Digitalisasi 33 Berkas Baku Induk, Verifikasi Berjenjang, dan Autentikasi Tanda Tangan Elektronik (TTE) Personel Militer & PNS TNI AD', ['name' => 'Times New Roman', 'size' => 11, 'italic' => true], $pCenter);
 
 $coverSection->addTextBreak(4);
 
@@ -728,7 +728,7 @@ $pLogin = [
     'Melakukan pencocokan akun pada tabel users berdasarkan username yang aktif.',
     'Memverifikasi hash kata sandi menggunakan fungsi password_verify() (algoritma bcrypt).',
     'Memeriksa status akun; apabila berstatus "pending" atau "rejected", sistem menolak login dan menampilkan pesan edukatif.',
-    'Jika otentikasi berhasil: regenerasi session_id() baru, menetapkan variabel $_SESSION user, memperbarui last_login, dan mencatat log audit pada activity_log.',
+    'Jika autentikasi berhasil: regenerasi session_id() baru, menetapkan variabel $_SESSION user, memperbarui last_login, dan mencatat log audit pada activity_log.',
     'Mengarahkan (redirect) pengguna sesuai perannya: role admin ke /admin/dashboard.php, role personel ke /personel/dashboard.php.',
 ];
 renderSpecProgram(
@@ -808,7 +808,7 @@ $pVerify = [
     '   c) Meng-generate kode unik TTE resmi: "TTE-TRISULA-{YYYYMM}-{ID}-{TOKEN6}".',
     '   d) Membentuk URL verifikasi publik ber-QR Code: "https://domain/verify.php?code=...".',
     '   e) Mengambil data profil pejabat penandatangan (Nama Admin, Pangkat, NRP, Satuan).',
-    '   f) Membuka berkas menggunakan pustaka FPDI + TCPDF; menyematkan Running Line Otentikasi pada seluruh halaman dan membubuhkan Kotak Stempel TTE Resmi ber-QR Code pada sudut kanan bawah halaman terakhir.',
+    '   f) Membuka berkas menggunakan pustaka FPDI + TCPDF; menyematkan Running Line Autentikasi pada seluruh halaman dan membubuhkan Kotak Stempel TTE Resmi ber-QR Code pada sudut kanan bawah halaman terakhir.',
     '   g) Menyimpan berkas hasil TTE, memperbarui status dosir_files menjadi "approved", mengisi signature_code dan signature_hash, serta mencatat log audit pada activity_log.',
 ];
 renderSpecProgram(
@@ -869,9 +869,9 @@ $cL2->addText('├──────┬─────────────�
 $cL2->addText('│ KODE │ NAMA JENIS DOSIR (33 BAKU)    │ STATUS       │ AKSI DOKUMEN     │', $fTableCellCode, $pCenter);
 $cL2->addText('├──────┼───────────────────────────────┼──────────────┼──────────────────┤', $fTableCellCode, $pCenter);
 $cL2->addText('│  01  │ SURAT LAMARAN                 │ APPROVED     │ [Lihat PDF TTE]  │', $fTableCellCode, $pCenter);
-$cL2->addText('│  02  │ AKTE KELAHIRAN YBS            │ APPROVED     │ [Lihat PDF TTE]  │', $fTableCellCode, $pCenter);
-$cL2->addText('│  05  │ IJASAH STTB (DIKUM)           │ PENDING      │ [Menunggu Admin] │', $fTableCellCode, $pCenter);
-$cL2->addText('│  16  │ IJASAH DIKMIL (DIKPAPROG)     │ KOSONG       │ [Unggah / Scan]  │', $fTableCellCode, $pCenter);
+$cL2->addText('│  02  │ AKTA KELAHIRAN YBS            │ APPROVED     │ [Lihat PDF TTE]  │', $fTableCellCode, $pCenter);
+$cL2->addText('│  05  │ IJAZAH STTB (DIKUM)           │ PENDING      │ [Menunggu Admin] │', $fTableCellCode, $pCenter);
+$cL2->addText('│  16  │ IJAZAH DIKMIL (DIKPAPROG)     │ KOSONG       │ [Unggah / Scan]  │', $fTableCellCode, $pCenter);
 $cL2->addText('└──────┴───────────────────────────────┴──────────────┴──────────────────┘', $fTableCellCode, $pCenter);
 
 $mainSection->addTextBreak(1);
@@ -885,7 +885,7 @@ $cL3->addText('┌────────────────────�
 $cL3->addText('│              ✓ DOKUMEN SAH & TERVERIFIKASI SECARA ELEKTRONIK           │', $fTableCellCode, $pCenter);
 $cL3->addText('│                  KODE REGISTRASI: TTE-TRISULA-202609-12-8A9F           │', $fTableCellCode, $pCenter);
 $cL3->addText('├────────────────────────────────────────────────────────────────────────┤', $fTableCellCode, $pCenter);
-$cL3->addText('│ Jenis Dosir    : DOSIR 16 — IJASAH DIKMIL / SAR / TUK / CAB            │', $fTableCellCode, $pCenter);
+$cL3->addText('│ Jenis Dosir    : DOSIR 16 — IJAZAH DIKMIL / SAR / TUK / CAB            │', $fTableCellCode, $pCenter);
 $cL3->addText('│ Nama Personel  : Letda Czi Fris Wardani (NRP 2118...)                  │', $fTableCellCode, $pCenter);
 $cL3->addText('│ Pangkat/Satuan : Letda Czi / Denzibang 3/I Jaya                        │', $fTableCellCode, $pCenter);
 $cL3->addText('│ Pejabat TTE    : Mayor Inf Hendra Pratama (Kasi Pers)                  │', $fTableCellCode, $pCenter);
@@ -937,7 +937,7 @@ $mainSection->addPageBreak();
 // 16. LISTING PROGRAM
 // ---------------------------------------------------------------------
 $mainSection->addText('16.  Listing Program.', $fHeading1, $pLeft);
-$mainSection->addText('Listing program menyajikan kode sumber inti (core source code) yang merepresentasikan logika algoritma otentikasi TTE, pembubuhan watermark keabsahan ber-QR Code, penataan berkas 33 dosir baku, serta rumus proyeksi masa pensiun dan rotasi jabatan.', $fNormal, $pJustify);
+$mainSection->addText('Listing program menyajikan kode sumber inti (core source code) yang merepresentasikan logika algoritma autentikasi TTE, pembubuhan watermark keabsahan ber-QR Code, penataan berkas 33 dosir baku, serta rumus proyeksi masa pensiun dan rotasi jabatan.', $fNormal, $pJustify);
 $mainSection->addTextBreak(1);
 
 // Listing 1: TTE & Watermark
@@ -971,9 +971,9 @@ function apply_digital_signature_pdf(\$rawMasterPath, \$outputPath, array \$sign
             \$pdf->useTemplate(\$tplId);
             \$w = \$size['width']; \$h = \$size['height'];
 
-            // 1. Running Header Otentikasi Pada Seluruh Halaman
+            // 1. Running Header Autentikasi Pada Seluruh Halaman
             \$pdf->SetAlpha(1.0); \$pdf->SetFont('helvetica', '', 6.5); \$pdf->SetTextColor(70, 95, 75);
-            \$line = "★ TRISULA TNI AD — DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: \$code | HASH: \$shortHash | \$signDate WIB";
+            \$line = "E-DOSIR TNI AD - DITANDATANGANI SECARA ELEKTRONIK (TTE) | KODE: \$code | HASH: \$shortHash | \$signDate WIB";
             \$pdf->SetXY(6, \$h - 6.5); \$pdf->Cell(\$w - 12, 4, \$line, 0, 0, 'L');
 
             // 2. Kotak Pengesahan TTE Resmi Ber-QR Code Pada Halaman Terakhir

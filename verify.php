@@ -200,7 +200,7 @@ $pageTitle = 'Verifikasi Keabsahan Dokumen TTE';
     <?php endif; ?>
     <h2 style="margin:0;"><?= htmlspecialchars(get_setting($pdo, 'app_name', APP_NAME)) ?></h2>
     <div style="color:var(--text-dim);font-size:13px;margin-top:4px;">
-      Layanan Otentikasi &amp; Verifikasi Tanda Tangan Elektronik (TTE) &middot; <?= htmlspecialchars(get_setting($pdo, 'instansi', 'TNI Angkatan Darat')) ?>
+      Layanan Autentikasi &amp; Verifikasi Tanda Tangan Elektronik (TTE) &middot; <?= htmlspecialchars(get_setting($pdo, 'instansi', 'TNI Angkatan Darat')) ?>
     </div>
   </div>
 
@@ -214,7 +214,7 @@ $pageTitle = 'Verifikasi Keabsahan Dokumen TTE';
     <!-- Tab 1: Cari Berdasarkan Kode Registrasi TTE -->
     <div id="tabCode" class="tab-pane <?= $verifySource === 'code' ? 'active' : '' ?>">
       <form method="get" action="<?= BASE_URL ?>/verify.php" style="display:flex;gap:10px;align-items:center;">
-        <input type="text" name="code" value="<?= htmlspecialchars($code) ?>" placeholder="Masukkan Nomor Registrasi TTE (cth: TTE-TRISULA-...)" style="flex:1;margin:0;" required>
+        <input type="text" name="code" value="<?= htmlspecialchars($code) ?>" placeholder="Masukkan Nomor Registrasi TTE (cth: TTE-TRISULA-... atau TTE-TNIAD-...)" style="flex:1;margin:0;" required>
         <button type="submit" class="btn" style="white-space:nowrap;padding:10px 18px;">Verifikasi</button>
       </form>
     </div>

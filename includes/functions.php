@@ -62,7 +62,7 @@ function build_dosir_filename($nrp, $kode, $abjad) {
 
 /**
  * URL aman ke berkas dosir melalui controller terproteksi (view_file.php)
- * Memastikan otentikasi dan otorisasi sebelum berkas dapat diakses.
+ * Memastikan autentikasi dan otorisasi sebelum berkas dapat diakses.
  * Dilengkapi versi waktu modifikasi (&v=) agar dokumen yang telah diapprove
  * langsung termutakhirkan tanpa terhalang cache peramban/PDF viewer.
  */

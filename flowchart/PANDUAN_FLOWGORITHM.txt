@@ -22,7 +22,7 @@ langsung menggunakan perangkat lunak Flowgorithm.
 A. KLASTER ALUR UTAMA & SISTEM INDUK (MASTER FLOW)
 1. TRISULA_Alur_Utama_Sistem.fprg
    - Diagram Alur Induk (Master Flowchart) arsitektur sistem TRISULA.
-   - Mengorkestrasi alur publik (Login, Pendaftaran, Cek QR) dan alur terotentikasi
+   - Mengorkestrasi alur publik (Login, Pendaftaran, Cek QR) dan alur terautentikasi
      berdasarkan hak akses pengguna (Role: Administrator Satuan vs Prajurit).
 
 B. KLASTER AUTENTIKASI & AKUN PENGGUNA

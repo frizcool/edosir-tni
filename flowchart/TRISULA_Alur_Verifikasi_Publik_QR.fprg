@@ -79,7 +79,7 @@
                             <if expression="hashMatch">
                                 <then>
                                     <output expression="&quot;============================================================&quot;" newline="True"/>
-                                    <output expression="&quot;[SERTIFIKASI RESMI: DOKUMEN OTENTIK &amp; SAH TERVERIFIKASI]&quot;" newline="True"/>
+                                    <output expression="&quot;[SERTIFIKASI RESMI: DOKUMEN AUTENTIK &amp; SAH TERVERIFIKASI]&quot;" newline="True"/>
                                     <output expression="&quot;Tanda Tangan Elektronik (TTE) Resmi Mabes TNI AD Terkonfirmasi.&quot;" newline="True"/>
                                     <output expression="&quot;------------------------------------------------------------&quot;" newline="True"/>
                                     <output expression="&quot;Nama Prajurit : &quot; &amp; pangkatPrajurit &amp; &quot; &quot; &amp; korpsPrajurit &amp; &quot; &quot; &amp; namaPrajurit" newline="True"/>
