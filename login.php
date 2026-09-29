@@ -25,6 +25,13 @@ $appBrandSub = get_setting($pdo, 'app_brand_sub', 'TNI AD');
 $appLogo = app_logo_url();
 $cssVersion = file_exists(__DIR__ . '/assets/css/login-modern.css') ? filemtime(__DIR__ . '/assets/css/login-modern.css') : time();
 $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__DIR__ . '/assets/js/login-modern.js') : time();
+
+// Default: Alur aplikasi tampil pertama kali sebelum user mengklik Login.
+// Tampilkan login form secara langsung bila:
+// 1. Terdapat error submission login ($error)
+// 2. Terdapat pesan flash ($flash)
+// 3. Dipanggil dengan parameter ?action=login atau ?login=1
+$showLoginByDefault = !empty($error) || !empty($flash) || (isset($_GET['action']) && $_GET['action'] === 'login') || (isset($_GET['login']) && $_GET['login'] == '1');
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -69,7 +76,10 @@ $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__D
       <nav>
         <ul class="nav-links" id="navLinksContainer">
           <li class="nav-item">
-            <a href="<?= BASE_URL ?>/login.php" class="link-effect" id="navHomeLink">Home</a>
+            <button type="button" class="link-effect" id="navHomeLink" title="Beranda & Alur Prosedur">Home</button>
+          </li>
+          <li class="nav-item">
+            <button type="button" class="link-effect" id="navWorkflowBtn" title="Lihat Alur Sistem E-Dosir">Alur Sistem</button>
           </li>
           <li class="nav-item">
             <button type="button" class="link-effect" id="navAboutBtn">About</button>
@@ -97,15 +107,189 @@ $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__D
       </button>
     </header>
 
-    <!-- Main Content: Centered Floating Frosted Glass Login Modal -->
+    <!-- Main Content: Center Area (Workflow Showcase & Floating Glass Login Modal) -->
     <main class="hero-content">
-      <div class="login-card-container" id="loginCardContainer">
+      
+      <!-- =================================================================
+           1. ALUR PROSEDUR SISTEM APLIKASI (Ditampilkan Default Sebelum Klik Login)
+           ================================================================= -->
+      <div class="workflow-container" id="workflowContainer" <?= $showLoginByDefault ? 'style="display:none;"' : '' ?>>
+        
+        <!-- Header Alur Aplikasi -->
+        <div class="workflow-header">
+          <div class="workflow-badge-pill">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Standar Operasional Prosedur &bull; E-Dosir TNI AD</span>
+          </div>
+          <h1 class="workflow-title">Alur & Tata Kelola Sistem <?= htmlspecialchars($appBrandTitle) ?></h1>
+          <p class="workflow-subtitle">
+            Tata kelola terpadu rekam berkas warkat dosir digital personel militer, mulai dari pendaftaran akun hingga penerbitan Sertifikasi Tanda Tangan Elektronik (TTE) resmi ber-QR Code.
+          </p>
+        </div>
+
+        <!-- 6 Tahapan Grid Alur Sistem -->
+        <div class="workflow-grid">
+          
+          <!-- Tahap 1: Registrasi Personel -->
+          <div class="workflow-step-card">
+            <div class="workflow-card-top">
+              <span class="workflow-step-num">TAHAP 01</span>
+              <div class="workflow-icon-box" title="Registrasi Akun">📝</div>
+            </div>
+            <h3 class="workflow-card-title">Registrasi Personel</h3>
+            <p class="workflow-card-desc">
+              Prajurit dan PNS TNI AD mendaftar akun baru dengan mengisi data dinas (NRP, nama lengkap, golongan kepangkatan, korp, dan satuan).
+            </p>
+            <div class="workflow-callout-box callout-info">
+              ⏳ <strong>Status Akun Awal:</strong> <em>Pending</em> (Menunggu validasi data dinas oleh Staf Personel).
+            </div>
+          </div>
+
+          <!-- Tahap 2: Validasi Admin & Izin Login -->
+          <div class="workflow-step-card">
+            <div class="workflow-card-top">
+              <span class="workflow-step-num">TAHAP 02</span>
+              <div class="workflow-icon-box" title="Validasi Akun Admin">🛡️</div>
+            </div>
+            <h3 class="workflow-card-title">Validasi Akun oleh Admin</h3>
+            <p class="workflow-card-desc">
+              Administrator (Staf Personel Satuan) memverifikasi identitas prajurit pada sistem pangkalan induk dan menyetujui akun dinas.
+            </p>
+            <div class="workflow-callout-box callout-warning">
+              🔒 <strong>Ketentuan Akses:</strong> <strong>User hanya dapat login setelah divalidasi oleh Admin</strong>. Kata sandi awal otomatis menggunakan NRP Anda.
+            </div>
+          </div>
+
+          <!-- Tahap 3: Login Personel -->
+          <div class="workflow-step-card">
+            <div class="workflow-card-top">
+              <span class="workflow-step-num">TAHAP 03</span>
+              <div class="workflow-icon-box" title="Masuk Portal">🔐</div>
+            </div>
+            <h3 class="workflow-card-title">Login Personel Terverifikasi</h3>
+            <p class="workflow-card-desc">
+              Setelah akun disetujui admin, personel dapat masuk ke portal TRISULA untuk mengelola dokumen dan memeriksa kelengkapan dosirnya.
+            </p>
+            <div class="workflow-callout-box callout-success" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <span>✓ Akun aktif siap digunakan</span>
+              <button type="button" class="btn" style="padding:4px 10px;font-size:11px;background:var(--primary-gold);color:#000;font-weight:700;border:none;border-radius:6px;cursor:pointer;" data-action="open-login">
+                Buka Login &rarr;
+              </button>
+            </div>
+          </div>
+
+          <!-- Tahap 4: Upload / Scan Berkas Dosir -->
+          <div class="workflow-step-card">
+            <div class="workflow-card-top">
+              <span class="workflow-step-num">TAHAP 04</span>
+              <div class="workflow-icon-box" title="Unggah Dosir">📂</div>
+            </div>
+            <h3 class="workflow-card-title">Upload & Scan Berkas Dosir</h3>
+            <p class="workflow-card-desc">
+              Personel mengunggah berkas riwayat kedinasan sesuai 33 kategori dosir resmi (format PDF standar atau hasil scan kamera langsung via jsPDF).
+            </p>
+            <div class="workflow-callout-box callout-warning">
+              ⚠️ <strong>Status Berkas Awal:</strong> Otomatis diberi cap tanda <em>"Belum Terverifikasi Dokumen"</em>.
+            </div>
+          </div>
+
+          <!-- Tahap 5: Verifikasi Dokumen oleh Admin -->
+          <div class="workflow-step-card">
+            <div class="workflow-card-top">
+              <span class="workflow-step-num">TAHAP 05</span>
+              <div class="workflow-icon-box" title="Verifikasi Staf Pers">⚖️</div>
+            </div>
+            <h3 class="workflow-card-title">Verifikasi Dokumen Staf Pers</h3>
+            <p class="workflow-card-desc">
+              Tim verifikator memeriksa kelengkapan warkat, kejelasan cap dinas, keabsahan tanda tangan pejabat, dan nomor surat keputusan resmi.
+            </p>
+            <div class="workflow-callout-box callout-info">
+              🔍 <strong>Pemeriksaan:</strong> Verifikator menentukan kelayakan dokumen untuk diterbitkan segel digital atau dikembalikan.
+            </div>
+          </div>
+
+          <!-- Tahap 6: Keputusan Verifikasi & TTE (Branching) -->
+          <div class="workflow-step-card workflow-step-6-card">
+            <div class="workflow-card-top">
+              <span class="workflow-step-num" style="background:rgba(212,175,55,0.25);">TAHAP 06 &bull; HASIL KEPUTUSAN VERIFIKASI</span>
+              <div class="workflow-icon-box" title="Keputusan TTE">🔀</div>
+            </div>
+            <h3 class="workflow-card-title">Penerbitan TTE Resmi atau Perbaikan Dokumen</h3>
+            <p class="workflow-card-desc" style="margin-bottom:6px;">
+              Berdasarkan hasil uji berkas oleh Staf Verifikator, sistem menerapkan salah satu dari dua ketentuan status berikut:
+            </p>
+            
+            <div class="decision-branches-grid">
+              <!-- Cabang A: Approved -> TTE -->
+              <div class="branch-box branch-approved">
+                <div style="display:flex;align-items:center;gap:6px;font-weight:700;color:#4ade80;margin-bottom:6px;font-size:13.5px;">
+                  <span>✓ JIKA DISETUJUI (APPROVE)</span>
+                </div>
+                <div style="color:var(--text-muted);font-size:12px;line-height:1.5;">
+                  Cap awal dibersihkan dan digantikan <strong>Sertifikasi Tanda Tangan Elektronik (TTE) Resmi</strong>. Sistem menerbitkan kode registrasi unik, nilai hash SHA-256 integritas dokumen, dan <strong>QR Code segel digital</strong> yang dapat diuji keabsahannya secara online.
+                </div>
+              </div>
+
+              <!-- Cabang B: Rejected / Belum Terverifikasi -->
+              <div class="branch-box branch-rejected">
+                <div style="display:flex;align-items:center;gap:6px;font-weight:700;color:#f87171;margin-bottom:6px;font-size:13.5px;">
+                  <span>✕ JIKA DITOLAK / TIDAK SESUAI</span>
+                </div>
+                <div style="color:var(--text-muted);font-size:12px;line-height:1.5;">
+                  Berkas <strong>tetap bertanda "Belum Terverifikasi Dokumen"</strong> disertai catatan dinas perbaikan dari admin. Personel dapat melihat alasan penolakan dan mengunggah ulang dokumen perbaikan yang sah.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Tombol Aksi Utama di Bawah Alur -->
+        <div class="workflow-cta-bar">
+          <button type="button" class="cta-btn-login" id="workflowLoginBtn">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            <span>Masuk ke Sistem (Login)</span>
+          </button>
+
+          <a href="<?= BASE_URL ?>/register.php" class="cta-btn-register">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/>
+              <line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+            <span>Registrasi Personel Baru</span>
+          </a>
+
+          <a href="<?= BASE_URL ?>/verify.php" class="cta-btn-verify">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            <span>Uji Keabsahan QR Code</span>
+          </a>
+        </div>
+
+      </div>
+
+      <!-- =================================================================
+           2. FORMULIR LOGIN (Tampil Ketika Tombol Login Diklik atau Ada Error)
+           ================================================================= -->
+      <div class="login-card-container" id="loginCardContainer" <?= !$showLoginByDefault ? 'style="display:none;"' : '' ?>>
         <div class="glass-card" id="glassCard">
           <!-- Dynamic Light Specular Reflection Layer -->
           <div class="glass-card-glare"></div>
 
-          <!-- Close Button 'X' at Top Right (Exact Reference Image 1) -->
-          <button type="button" class="card-close-btn" id="cardCloseBtn" title="Tutup Formulir untuk Melihat Wallpaper">
+          <!-- Close Button 'X' at Top Right (Kembali ke Alur Aplikasi) -->
+          <button type="button" class="card-close-btn" id="cardCloseBtn" title="Kembali ke Alur Aplikasi">
             <svg viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -149,7 +333,7 @@ $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__D
           <form method="post" action="<?= BASE_URL ?>/login.php" class="auth-form" id="loginForm" autocomplete="on">
             <?= csrf_field() ?>
 
-            <!-- Field 1: Email / Username / NRP (Matching Image 1) -->
+            <!-- Field 1: Email / Username / NRP -->
             <div class="form-group">
               <label for="usernameInput" class="form-label">Email / NRP / Username</label>
               <div class="input-container">
@@ -172,7 +356,7 @@ $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__D
               </div>
             </div>
 
-            <!-- Field 2: Password (Matching Image 1) -->
+            <!-- Field 2: Password -->
             <div class="form-group">
               <label for="passwordInput" class="form-label">Password</label>
               <div class="input-container">
@@ -196,7 +380,7 @@ $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__D
               </div>
             </div>
 
-            <!-- Row: Remember Me & Forgot Password (Exact Reference Image 1) -->
+            <!-- Row: Remember Me & Forgot Password -->
             <div class="form-options-row">
               <label class="remember-me-label" for="rememberMeCheckbox">
                 <input type="checkbox" id="rememberMeCheckbox" class="remember-me-input">
@@ -213,16 +397,27 @@ $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__D
               </button>
             </div>
 
-            <!-- Submit Button: "Login" (Exact Style from Reference Image 1) -->
+            <!-- Submit Button: "Login" -->
             <button type="submit" class="btn-submit-login" id="submitLoginBtn">
               <span class="spinner-icon"></span>
               <span id="submitBtnText">Login</span>
             </button>
           </form>
 
-          <!-- Card Footer (Matching Image 1: "Don't have an account? Register") -->
+          <!-- Card Footer -->
           <div class="card-footer">
             Don't have an account? <a href="<?= BASE_URL ?>/register.php">Register</a>
+          </div>
+
+          <!-- Back to Workflow Link -->
+          <div style="text-align:center;">
+            <button type="button" class="back-to-workflow-link" id="backToWorkflowBtn">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"/>
+                <polyline points="12 19 5 12 12 5"/>
+              </svg>
+              <span>Kembali ke Alur Prosedur Aplikasi</span>
+            </button>
           </div>
         </div>
       </div>

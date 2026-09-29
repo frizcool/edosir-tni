@@ -159,7 +159,7 @@
     }
 
     // 3D Tilt calculation (desktop only)
-    if (cardContainer && glassCard && window.innerWidth >= 900 && !cardContainer.classList.contains('hidden-card')) {
+    if (cardContainer && glassCard && window.innerWidth >= 900 && !cardContainer.classList.contains('hidden-card') && cardContainer.style.display !== 'none') {
       if (!cardRect) updateCardRect();
 
       const cardCenterX = cardRect.left + cardRect.width / 2;
@@ -190,32 +190,29 @@
   });
 
   // =====================================================================
-  // 3. CARD DISMISS & RESTORE (Interactive 'X' Button & Trigger)
+  // 3. WORKFLOW VIEW & LOGIN CARD TOGGLE
   // =====================================================================
+  const workflowContainer = document.getElementById('workflowContainer');
+  const loginCardContainer = document.getElementById('loginCardContainer');
   const cardCloseBtn = document.getElementById('cardCloseBtn');
   const cardRestoreTrigger = document.getElementById('cardRestoreTrigger');
   const navLoginBtn = document.getElementById('navLoginBtn');
+  const navHomeLink = document.getElementById('navHomeLink');
+  const navWorkflowBtn = document.getElementById('navWorkflowBtn');
+  const workflowLoginBtn = document.getElementById('workflowLoginBtn');
+  const backToWorkflowBtn = document.getElementById('backToWorkflowBtn');
   const usernameInput = document.getElementById('usernameInput');
 
-  function dismissCard() {
-    if (cardContainer) {
-      cardContainer.classList.add('hidden-card');
+  function showLoginForm() {
+    if (workflowContainer) {
+      workflowContainer.style.display = 'none';
     }
-    if (cardRestoreTrigger) {
-      cardRestoreTrigger.classList.add('visible');
-    }
-    if (navLoginBtn) {
-      navLoginBtn.classList.add('active-glow');
-    }
-  }
-
-  function restoreCard() {
-    if (cardContainer) {
-      cardContainer.classList.remove('hidden-card');
-      cardContainer.style.animation = 'none';
-      // Trigger reflow
-      void cardContainer.offsetWidth;
-      cardContainer.style.animation = 'cardEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+    if (loginCardContainer) {
+      loginCardContainer.style.display = 'block';
+      loginCardContainer.classList.remove('hidden-card');
+      loginCardContainer.style.animation = 'none';
+      void loginCardContainer.offsetWidth; // trigger reflow
+      loginCardContainer.style.animation = 'cardEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards';
       updateCardRect();
     }
     if (cardRestoreTrigger) {
@@ -224,32 +221,107 @@
     if (navLoginBtn) {
       navLoginBtn.classList.remove('active-glow');
     }
-    // Auto-focus username
     if (usernameInput) {
       setTimeout(() => usernameInput.focus(), 250);
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      if (window.location.hash !== '#login') {
+        history.replaceState(null, null, '#login');
+      }
+    } catch (e) {}
   }
+
+  function showWorkflow() {
+    if (loginCardContainer) {
+      loginCardContainer.style.display = 'none';
+      loginCardContainer.classList.add('hidden-card');
+    }
+    if (workflowContainer) {
+      workflowContainer.style.display = 'block';
+      workflowContainer.style.animation = 'none';
+      void workflowContainer.offsetWidth;
+      workflowContainer.style.animation = 'workflowEntrance 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+    }
+    if (cardRestoreTrigger) {
+      cardRestoreTrigger.classList.remove('visible');
+    }
+    if (navLoginBtn) {
+      navLoginBtn.classList.add('active-glow');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      if (window.location.hash === '#login') {
+        history.replaceState(null, null, window.location.pathname);
+      }
+    } catch (e) {}
+  }
+
+  if (workflowLoginBtn) {
+    workflowLoginBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      showLoginForm();
+    });
+  }
+
+  document.querySelectorAll('[data-action="open-login"]').forEach(el => {
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      showLoginForm();
+    });
+  });
 
   if (cardCloseBtn) {
     cardCloseBtn.addEventListener('click', function (e) {
       e.preventDefault();
-      dismissCard();
+      showWorkflow();
+    });
+  }
+
+  if (backToWorkflowBtn) {
+    backToWorkflowBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      showWorkflow();
     });
   }
 
   if (cardRestoreTrigger) {
     cardRestoreTrigger.addEventListener('click', function () {
-      restoreCard();
+      showLoginForm();
     });
   }
 
   if (navLoginBtn) {
     navLoginBtn.addEventListener('click', function (e) {
       e.preventDefault();
-      restoreCard();
-      // Scroll to center if needed
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showLoginForm();
     });
+  }
+
+  if (navHomeLink) {
+    navHomeLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      showWorkflow();
+    });
+  }
+
+  if (navWorkflowBtn) {
+    navWorkflowBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      showWorkflow();
+    });
+  }
+
+  // Keyboard Escape: return to workflow if login card is open
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && loginCardContainer && loginCardContainer.style.display !== 'none' && !loginCardContainer.classList.contains('hidden-card')) {
+      showWorkflow();
+    }
+  });
+
+  // Check URL hash on load
+  if (window.location.hash === '#login') {
+    showLoginForm();
   }
 
   // =====================================================================
