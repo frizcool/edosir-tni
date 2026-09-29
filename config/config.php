@@ -6,11 +6,74 @@ date_default_timezone_set('Asia/Jakarta');
 
 define('APP_ROOT', dirname(__DIR__));
 
+// =====================================================================
+// PEMUAT VARIABEL LINGKUNGAN (.env LOADER MANDIRI)
+// =====================================================================
+if (!function_exists('load_environment_file')) {
+    function load_environment_file(string $filePath): void {
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            return;
+        }
+        $lines = @file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false) {
+            return;
+        }
+        foreach ($lines as $line) {
+            $line = trim($line);
+            // Abaikan baris kosong atau komentar
+            if ($line === '' || str_starts_with($line, '#') || str_starts_with($line, ';')) {
+                continue;
+            }
+            if (str_contains($line, '=')) {
+                list($envKey, $envVal) = explode('=', $line, 2);
+                $envKey = trim($envKey);
+                $envVal = trim($envVal);
+
+                // Hilangkan pembungkus tanda petik jika ada
+                if (
+                    (str_starts_with($envVal, '"') && str_ends_with($envVal, '"')) ||
+                    (str_starts_with($envVal, "'") && str_ends_with($envVal, "'"))
+                ) {
+                    $envVal = substr($envVal, 1, -1);
+                }
+
+                // Daftarkan ke getenv(), $_ENV, dan $_SERVER jika belum diset dari level web server
+                if (getenv($envKey) === false) {
+                    putenv("{$envKey}={$envVal}");
+                }
+                if (!isset($_ENV[$envKey])) {
+                    $_ENV[$envKey] = $envVal;
+                }
+                if (!isset($_SERVER[$envKey])) {
+                    $_SERVER[$envKey] = $envVal;
+                }
+            }
+        }
+    }
+}
+load_environment_file(APP_ROOT . '/.env');
+
+// Pengalihan Paksa HTTPS jika diaktifkan di .env (Production Hosting)
+$forceHttps = filter_var(getenv('FORCE_HTTPS'), FILTER_VALIDATE_BOOLEAN);
+$isHttps = (
+    (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1)) ||
+    (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
+    (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) === 'on') ||
+    (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '443')
+);
+
+if ($forceHttps && !$isHttps && isset($_SERVER['HTTP_HOST']) && isset($_SERVER['REQUEST_URI'])) {
+    header('Location: https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'], true, 301);
+    exit;
+}
+
 // Deteksi BASE_URL otomatis (Kompatibel dengan Localhost Subfolder & Hosting Root/Domain)
 if (!defined('BASE_URL')) {
     $envBase = getenv('BASE_URL');
-    if ($envBase !== false) {
+    if ($envBase !== false && $envBase !== '') {
         define('BASE_URL', rtrim($envBase, '/'));
+    } elseif ($envBase === '') {
+        define('BASE_URL', '');
     } else {
         $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT']) ?: $_SERVER['DOCUMENT_ROOT']) : '';
         $appRoot = str_replace('\\', '/', APP_ROOT);
@@ -24,8 +87,17 @@ if (!defined('BASE_URL')) {
 }
 
 // Pengaturan Pelaporan Error (Aman untuk Hosting Produksi, Mencegah Kebocoran Informasi)
-$isProduction = (getenv('APP_ENV') === 'production') || (isset($_SERVER['SERVER_NAME']) && !in_array($_SERVER['SERVER_NAME'], ['localhost', '127.0.0.1', '::1'], true));
-if ($isProduction) {
+$appEnv = getenv('APP_ENV') ?: 'production';
+$appDebug = getenv('APP_DEBUG');
+$isProduction = ($appEnv === 'production') || (isset($_SERVER['SERVER_NAME']) && !in_array($_SERVER['SERVER_NAME'], ['localhost', '127.0.0.1', '::1'], true));
+
+if ($appDebug !== false && $appDebug !== null) {
+    $isDebug = filter_var($appDebug, FILTER_VALIDATE_BOOLEAN);
+} else {
+    $isDebug = !$isProduction;
+}
+
+if ($isProduction && !$isDebug) {
     ini_set('display_errors', '0');
     ini_set('display_startup_errors', '0');
     ini_set('log_errors', '1');
@@ -41,7 +113,8 @@ define('UPLOAD_DIR', APP_ROOT . '/uploads');
 define('BACKUP_DIR', APP_ROOT . '/backups');
 define('EXPORT_DIR', APP_ROOT . '/exports');
 
-define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024); // 10 MB per file
+$envMaxUpload = (int)getenv('MAX_UPLOAD_SIZE');
+define('MAX_UPLOAD_SIZE', $envMaxUpload > 0 ? $envMaxUpload : 10 * 1024 * 1024); // Default: 10 MB per file
 define('ALLOWED_UPLOAD_EXT', ['pdf']);        // seluruh berkas dosir WAJIB dalam bentuk PDF
                                                // hasil scan foto/kamera dikonversi ke PDF di sisi klien (jsPDF)
 
@@ -54,15 +127,20 @@ define('USIA_PENSIUN', [
 ]);
 
 // Proteksi Keamanan Sesi Cookie & HTTP Headers
+$sessionLifetime = (int)(getenv('SESSION_LIFETIME') ?: 7200);
+if ($sessionLifetime <= 0) {
+    $sessionLifetime = 7200;
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_strict_mode', '1');
-    $isSecure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on');
+    ini_set('session.gc_maxlifetime', (string)$sessionLifetime);
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => 0, // Cookie sesi browser (otomatis hangus saat browser ditutup)
         'path'     => '/',
         'domain'   => '',
-        'secure'   => $isSecure,
+        'secure'   => $isHttps,
         'httponly' => true,
         'samesite' => 'Lax'
     ]);
@@ -75,6 +153,7 @@ if (!headers_sent()) {
     header('X-Content-Type-Options: nosniff');
     header('X-XSS-Protection: 1; mode=block');
     header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Permissions-Policy: camera=(self), microphone=(), geolocation=()');
 }
 
 require_once APP_ROOT . '/config/database.php';

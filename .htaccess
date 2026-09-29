@@ -1,33 +1,56 @@
 # =====================================================================
-# PENGAMANAN APLIKASI E-DOSIR TNI AD
+# PENGAMANAN APLIKASI E-DOSIR TNI AD (PRODUCTION HOSTING HARDENING)
 # Mencegah Directory Browsing, Information Disclosure & Direct File Access
 # =====================================================================
 
 # 1. Matikan Directory Listing di seluruh tingkatan direktori
 Options -Indexes
 
-# 2. Blokir Akses ke Berkas Sensitif & Konfigurasi
-<FilesMatch "^(composer\.(json|lock)|\.git.*|\.env.*|.*\.sql|.*\.md|.*\.log|.*\.bak|.*\.tmp)$">
-    Require all denied
+# 2. Blokir Akses ke Berkas Sensitif, .env, Git, Database Dump & Log
+<FilesMatch "^\.env|^\.git|\.(sql|bak|tmp|log|md|json|lock)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
-# 3. Blokir Akses Langsung ke Folder Konfigurasi, SQL & Pustaka Internal
+# 3. Blokir Akses Langsung ke Folder Konfigurasi, SQL, Vendor, dan Includes
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteRule ^(config|sql|vendor)/ - [F,L]
+
+    # Blokir akses HTTP langsung ke direktori internal sistem
+    RewriteRule ^(config|sql|vendor|includes|backups|exports)/ - [F,L]
+
+    # Blokir berkas tersembunyi berawalan titik (.env, .git, .htaccess)
+    RewriteRule (^|/)\.(env|git|htaccess|htpasswd) - [F,L]
 </IfModule>
 
-# 4. HTTP Security Headers
+# 4. HTTP Security Headers (Defensive in-depth)
 <IfModule mod_headers.c>
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+    Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
 </IfModule>
 
 # 5. Penanganan Halaman Kesalahan Kustom (Custom Error Handling)
-ErrorDocument 401 /edosir-tni/error.php?code=401
-ErrorDocument 403 /edosir-tni/error.php?code=403
-ErrorDocument 404 /edosir-tni/error.php?code=404
-ErrorDocument 500 /edosir-tni/error.php?code=500
+# CATATAN HOSTING: Jika diunggah di root domain (public_html langsung),
+# hapus awalan '/edosir-tni' menjadi '/error.php?code=xxx'
+<IfModule !mod_authz_core.c>
+    ErrorDocument 401 /edosir-tni/error.php?code=401
+    ErrorDocument 403 /edosir-tni/error.php?code=403
+    ErrorDocument 404 /edosir-tni/error.php?code=404
+    ErrorDocument 500 /edosir-tni/error.php?code=500
+</IfModule>
+<IfModule mod_authz_core.c>
+    ErrorDocument 401 /edosir-tni/error.php?code=401
+    ErrorDocument 403 /edosir-tni/error.php?code=403
+    ErrorDocument 404 /edosir-tni/error.php?code=404
+    ErrorDocument 500 /edosir-tni/error.php?code=500
+</IfModule>
 
