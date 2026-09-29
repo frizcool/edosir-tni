@@ -137,8 +137,7 @@ function verify_csrf() {
         $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         $sessionToken = $_SESSION['csrf_token'] ?? '';
         if (empty($token) || empty($sessionToken) || !hash_equals($sessionToken, $token)) {
-            http_response_code(403);
-            die('Validasi keamanan gagal: Token CSRF tidak valid atau telah kadaluarsa. Silakan muat ulang halaman.');
+            abort(403, 'Validasi keamanan gagal: Token CSRF tidak valid atau telah kadaluarsa. Silakan muat ulang halaman.', 'Keamanan Token CSRF');
         }
     }
 }
@@ -418,7 +417,7 @@ function get_distinct_personel_field($pdo, $fieldName) {
     try {
         $stmt = $pdo->query("
             SELECT DISTINCT $fieldName 
-            FROM personel 
+            FROM v_personel_lengkap 
             WHERE $fieldName IS NOT NULL AND $fieldName != '' 
             ORDER BY $fieldName ASC
         ");
@@ -559,68 +558,16 @@ function get_master_satuan_list($pdo, $kotama_id = null) {
     }
 }
 
-/** Sinkronisasi otomatis data string personel ke relasi Foreign Key master rujukan */
+/** Sinkronisasi relasi Foreign Key master rujukan (misal sinkronisasi kotama_id dari satuan_id) */
 function sync_personel_natural_relations($pdo) {
     try {
-        $pangkatList = $pdo->query("SELECT id, singkatan, nama, kode FROM master_pangkat")->fetchAll(PDO::FETCH_ASSOC);
-        $korpList = $pdo->query("SELECT id, kode, nama FROM master_korp")->fetchAll(PDO::FETCH_ASSOC);
-        $kotamaList = $pdo->query("SELECT id, kode, nama FROM master_kotama")->fetchAll(PDO::FETCH_ASSOC);
-        $satuanList = $pdo->query("SELECT id, kode, nama, kotama_id FROM master_satuan")->fetchAll(PDO::FETCH_ASSOC);
-
-        $personelAll = $pdo->query("SELECT id, pangkat, korp, satuan, kotama, pangkat_id, korp_id, satuan_id, kotama_id FROM personel")->fetchAll(PDO::FETCH_ASSOC);
-
-        $upd = $pdo->prepare("UPDATE personel SET pangkat_id = ?, korp_id = ?, satuan_id = ?, kotama_id = ? WHERE id = ?");
-        $count = 0;
-
-        foreach ($personelAll as $p) {
-            $pktId = $p['pangkat_id'];
-            $krpId = $p['korp_id'];
-            $satId = $p['satuan_id'];
-            $kotId = $p['kotama_id'];
-
-            if (!$pktId && !empty($p['pangkat'])) {
-                foreach ($pangkatList as $mp) {
-                    if (strcasecmp($mp['singkatan'], trim($p['pangkat'])) === 0 || strcasecmp($mp['kode'], trim($p['pangkat'])) === 0 || stripos(trim($p['pangkat']), $mp['singkatan']) !== false) {
-                        $pktId = $mp['id'];
-                        break;
-                    }
-                }
-            }
-
-            if (!$krpId && !empty($p['korp'])) {
-                foreach ($korpList as $mk) {
-                    if (strcasecmp($mk['kode'], trim($p['korp'])) === 0 || strcasecmp($mk['nama'], trim($p['korp'])) === 0) {
-                        $krpId = $mk['id'];
-                        break;
-                    }
-                }
-            }
-
-            if (!$kotId && !empty($p['kotama'])) {
-                foreach ($kotamaList as $mkot) {
-                    if (strcasecmp($mkot['nama'], trim($p['kotama'])) === 0 || strcasecmp($mkot['kode'], trim($p['kotama'])) === 0 || stripos(trim($p['kotama']), $mkot['kode']) !== false) {
-                        $kotId = $mkot['id'];
-                        break;
-                    }
-                }
-            }
-
-            if (!$satId && !empty($p['satuan'])) {
-                foreach ($satuanList as $msat) {
-                    if (strcasecmp($msat['nama'], trim($p['satuan'])) === 0 || strcasecmp($msat['kode'], trim($p['satuan'])) === 0 || stripos(trim($p['satuan']), $msat['nama']) !== false) {
-                        $satId = $msat['id'];
-                        if (!$kotId && $msat['kotama_id']) {
-                            $kotId = $msat['kotama_id'];
-                        }
-                        break;
-                    }
-                }
-            }
-
-            $upd->execute([$pktId, $krpId, $satId, $kotId, $p['id']]);
-            $count++;
-        }
-        return $count;
+        $count = $pdo->exec("
+            UPDATE personel p
+            JOIN master_satuan ms ON p.satuan_id = ms.id
+            SET p.kotama_id = ms.kotama_id
+            WHERE p.kotama_id IS NULL AND ms.kotama_id IS NOT NULL
+        ");
+        return (int)$count;
     } catch (Exception $e) {
         return 0;
     }
@@ -631,40 +578,8 @@ function sync_personel_natural_relations($pdo) {
  * Menyelaraskan ejaan string 'pangkat', 'korp', 'satuan', 'kotama' agar seragam dengan master
  */
 function harmonize_personel_text_strings($pdo) {
-    try {
-        $count = 0;
-        // Harmonisasi pangkat
-        $pdo->query("
-            UPDATE personel p
-            JOIN master_pangkat mp ON mp.id = p.pangkat_id
-            SET p.pangkat = mp.singkatan
-            WHERE p.pangkat_id IS NOT NULL
-        ");
-        // Harmonisasi korp
-        $pdo->query("
-            UPDATE personel p
-            JOIN master_korp mk ON mk.id = p.korp_id
-            SET p.korp = mk.kode
-            WHERE p.korp_id IS NOT NULL
-        ");
-        // Harmonisasi kotama
-        $pdo->query("
-            UPDATE personel p
-            JOIN master_kotama mkot ON mkot.id = p.kotama_id
-            SET p.kotama = mkot.nama
-            WHERE p.kotama_id IS NOT NULL
-        ");
-        // Harmonisasi satuan
-        $pdo->query("
-            UPDATE personel p
-            JOIN master_satuan ms ON ms.id = p.satuan_id
-            SET p.satuan = ms.nama
-            WHERE p.satuan_id IS NOT NULL
-        ");
-        return true;
-    } catch (Exception $e) {
-        return false;
-    }
+    // Pada skema 3NF alami, teks pangkat/korp/satuan/kotama diambil langsung dari master tables
+    return true;
 }
 
 /**
@@ -693,18 +608,19 @@ function get_natural_database_stats($pdo) {
 
         if ($stats['total_personel'] > 0) {
             $stats['personel_lengkap'] = (int)$pdo->query("
-                SELECT COUNT(*) FROM personel 
-                WHERE pangkat_id IS NOT NULL 
-                  AND satuan_id IS NOT NULL 
-                  AND kotama_id IS NOT NULL
-                  AND (golongan = 'PNS' OR korp_id IS NOT NULL)
+                SELECT COUNT(*) FROM personel p
+                JOIN master_pangkat mp ON mp.id = p.pangkat_id
+                WHERE p.pangkat_id IS NOT NULL 
+                  AND p.satuan_id IS NOT NULL 
+                  AND (p.kotama_id IS NOT NULL OR p.satuan_id IN (SELECT id FROM master_satuan WHERE kotama_id IS NOT NULL))
+                  AND (mp.golongan = 'PNS' OR p.korp_id IS NOT NULL)
             ")->fetchColumn();
             $stats['personel_lengkap_pct'] = round(($stats['personel_lengkap'] / $stats['total_personel']) * 100, 1);
 
             $stats['missing_pangkat'] = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE pangkat_id IS NULL")->fetchColumn();
-            $stats['missing_korp']    = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE golongan != 'PNS' AND korp_id IS NULL")->fetchColumn();
+            $stats['missing_korp']    = (int)$pdo->query("SELECT COUNT(*) FROM personel p LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id WHERE (mp.golongan IS NULL OR mp.golongan != 'PNS') AND p.korp_id IS NULL")->fetchColumn();
             $stats['missing_satuan']  = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE satuan_id IS NULL")->fetchColumn();
-            $stats['missing_kotama']  = (int)$pdo->query("SELECT COUNT(*) FROM personel WHERE kotama_id IS NULL")->fetchColumn();
+            $stats['missing_kotama']  = (int)$pdo->query("SELECT COUNT(*) FROM personel p LEFT JOIN master_satuan ms ON ms.id = p.satuan_id WHERE p.kotama_id IS NULL AND (ms.kotama_id IS NULL)")->fetchColumn();
         }
     } catch (Exception $e) {
     }
@@ -921,4 +837,19 @@ function render_pagination($page, $totalPages, $totalRecords = 0, $perPage = 25,
     </div>
     <?php
     return ob_get_clean();
+}
+
+/**
+ * Tampilkan Halaman Kesalahan Resmi (401, 403, 404, 500, dll)
+ * Menghentikan eksekusi skrip dan merender template error taktis TRISULA.
+ */
+function abort($code = 404, $customMessage = '', $customTitle = '', $customDetail = '') {
+    $errorFile = defined('APP_ROOT') ? APP_ROOT . '/error.php' : __DIR__ . '/../error.php';
+    $errorCode = (int) $code;
+    if (file_exists($errorFile)) {
+        include $errorFile;
+        exit;
+    }
+    http_response_code($code);
+    die($customMessage ?: "Kesalahan HTTP $code");
 }

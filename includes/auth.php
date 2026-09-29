@@ -45,8 +45,7 @@ function require_login() {
 function require_role($role) {
     require_login();
     if ($_SESSION['user']['role'] !== $role) {
-        http_response_code(403);
-        die('Akses ditolak: halaman ini khusus untuk role ' . htmlspecialchars($role) . '.');
+        abort(403, 'Akses ditolak: Halaman ini khusus untuk peran (role) ' . htmlspecialchars($role) . '.', 'Pembatasan Wewenang Peran');
     }
 }
 
@@ -65,9 +64,10 @@ function do_login($pdo, $username, $password, &$error) {
         return false;
     }
 
-    $stmt = $pdo->prepare("SELECT u.*, p.nama, p.nrp, p.pangkat, p.foto
+    $stmt = $pdo->prepare("SELECT u.*, p.nama, p.nrp, mp.singkatan as pangkat, p.foto
                             FROM users u
                             LEFT JOIN personel p ON p.id = u.personel_id
+                            LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
                             WHERE u.username = ?");
     $stmt->execute([$username]);
     $user = $stmt->fetch();

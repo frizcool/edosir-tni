@@ -81,7 +81,14 @@ function process_single_dosir_verification(PDO $pdo, int $id, string $action, ar
         $verifyUrl = $scheme . '://' . $host . BASE_URL . '/verify.php?code=' . urlencode($signatureCode);
 
         // Ambil Profil Lengkap Administrator Verifikator
-        $stmtAdmin = $pdo->prepare("SELECT p.nama, p.pangkat, p.nrp, p.satuan FROM users u LEFT JOIN personel p ON p.id = u.personel_id WHERE u.id = ?");
+        $stmtAdmin = $pdo->prepare("
+            SELECT p.nama, mp.singkatan as pangkat, p.nrp, ms.nama as satuan 
+            FROM users u 
+            LEFT JOIN personel p ON p.id = u.personel_id 
+            LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+            LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
+            WHERE u.id = ?
+        ");
         $stmtAdmin->execute([$admin['id']]);
         $adminInfo = $stmtAdmin->fetch();
 

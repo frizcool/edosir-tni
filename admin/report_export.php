@@ -10,18 +10,27 @@ $batasJabatan = (int)get_setting($pdo, 'batas_tahun_jabatan', 2);
 
 $sql = "
     SELECT p.*,
+           mp.singkatan as pangkat,
+           mp.golongan,
+           mk.kode as korp,
+           ms.nama as satuan,
+           mkot.nama as kotama,
            COUNT(DISTINCT CASE WHEN f.status='approved' AND m.wajib=1 THEN f.dosir_kode END) as terisi_dosir
     FROM personel p
+    LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+    LEFT JOIN master_korp mk ON mk.id = p.korp_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
+    LEFT JOIN master_kotama mkot ON COALESCE(ms.kotama_id, p.kotama_id) = mkot.id
     LEFT JOIN dosir_files f ON f.personel_id = p.id
     LEFT JOIN dosir_master m ON m.kode = f.dosir_kode
     WHERE p.status_dinas = 'Aktif'
 ";
 $params = [];
 if ($satuan !== '') {
-    $sql .= " AND p.satuan = ?";
+    $sql .= " AND ms.nama = ?";
     $params[] = $satuan;
 }
-$sql .= " GROUP BY p.id ORDER BY p.satuan, p.nama";
+$sql .= " GROUP BY p.id ORDER BY ms.nama, p.nama";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $personelList = $stmt->fetchAll();

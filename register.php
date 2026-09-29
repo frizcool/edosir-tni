@@ -61,15 +61,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 resolve_and_save_personel_relations($pdo, $regData);
 
                 $stmt = $pdo->prepare(
-                    "INSERT INTO personel (nrp, nama, golongan, pangkat_id, pangkat, korp_id, korp, satuan_id, satuan, kotama_id, kotama, jabatan, tmt_jabatan, tmt_pangkat, tempat_lahir, tanggal_lahir, jenis_kelamin, tmt_pensiun_proyeksi)
-                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                    "INSERT INTO personel (nrp, nama, pangkat_id, korp_id, satuan_id, kotama_id, jabatan, tmt_jabatan, tmt_pangkat, tempat_lahir, tanggal_lahir, jenis_kelamin, tmt_pensiun_proyeksi)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
                 );
                 $stmt->execute([
-                    $regData['nrp'], $regData['nama'], $regData['golongan'],
-                    $regData['pangkat_id'], $regData['pangkat'],
-                    $regData['korp_id'], $regData['korp'],
-                    $regData['satuan_id'], $regData['satuan'],
-                    $regData['kotama_id'], $regData['kotama'],
+                    $regData['nrp'], $regData['nama'],
+                    $regData['pangkat_id'],
+                    $regData['korp_id'],
+                    $regData['satuan_id'],
+                    $regData['kotama_id'],
                     $regData['jabatan'], $regData['tmt_jabatan'], $regData['tmt_pangkat'],
                     $regData['tempat_lahir'], $regData['tanggal_lahir'], $regData['jenis_kelamin'],
                     $regData['tmt_pensiun_proyeksi']

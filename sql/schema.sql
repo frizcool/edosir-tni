@@ -203,15 +203,10 @@ CREATE TABLE IF NOT EXISTS personel (
   id INT AUTO_INCREMENT PRIMARY KEY,
   nrp VARCHAR(20) UNIQUE NOT NULL,
   nama VARCHAR(120) NOT NULL,
-  golongan ENUM('Perwira','Bintara','Tamtama','PNS') NOT NULL,
   pangkat_id INT NULL,
-  pangkat VARCHAR(50) NULL,
   korp_id INT NULL,
-  korp VARCHAR(50) NULL,
   satuan_id INT NULL,
-  satuan VARCHAR(150) NULL,
   kotama_id INT NULL,
-  kotama VARCHAR(150) NULL,
   jabatan VARCHAR(150) NULL,
   tmt_jabatan DATE NULL,
   tmt_pangkat DATE NULL,
@@ -232,12 +227,10 @@ CREATE TABLE IF NOT EXISTS personel (
   CONSTRAINT fk_personel_korp FOREIGN KEY (korp_id) REFERENCES master_korp(id) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_personel_satuan FOREIGN KEY (satuan_id) REFERENCES master_satuan(id) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_personel_kotama FOREIGN KEY (kotama_id) REFERENCES master_kotama(id) ON DELETE SET NULL ON UPDATE CASCADE,
-  INDEX idx_personel_satuan (satuan),
-  INDEX idx_personel_gol (golongan),
   INDEX idx_personel_status_dinas (status_dinas),
   INDEX idx_personel_pensiun (tmt_pensiun_proyeksi),
   INDEX idx_personel_tmt_jab (tmt_jabatan)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
 -- 7. USERS (Akun Pengguna Sistem - Relasi Natural 1:1 ke Personel)
@@ -306,32 +299,33 @@ CREATE TABLE IF NOT EXISTS dosir_files (
 CREATE TABLE IF NOT EXISTS activity_log (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NULL,
-  action VARCHAR(50) NOT NULL,
-  details TEXT NULL,
+  aktivitas VARCHAR(150) NOT NULL,
+  keterangan TEXT NULL,
   ip_address VARCHAR(45) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_act_user (user_id),
   INDEX idx_act_created (created_at),
-  INDEX idx_act_action (action),
+  INDEX idx_act_aktivitas (aktivitas),
   CONSTRAINT fk_activity_user 
     FOREIGN KEY (user_id) REFERENCES users(id) 
     ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
 -- 10. BACKUP_LOG (Log Riwayat Cadangan Data)
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS backup_log (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  filename VARCHAR(150) NOT NULL,
-  filepath VARCHAR(255) NOT NULL,
-  filesize BIGINT NOT NULL,
+  file_name VARCHAR(255) NOT NULL,
+  size_bytes BIGINT DEFAULT 0,
+  jenis ENUM('database','files','full') DEFAULT 'full',
   created_by INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_backup_user (created_by),
   CONSTRAINT fk_backup_user 
     FOREIGN KEY (created_by) REFERENCES users(id) 
     ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
 -- 11. LOGIN_ATTEMPTS (Pencegahan Serangan Brute Force)
@@ -372,10 +366,71 @@ ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);
 
 -- ---------------------------------------------------------------------
 -- AKUN ADMINISTRATOR DEFAULT AWAL (Bila Belum Ada)
--- username: admin / password hash: Admin#12345 (bcrypt)
+-- username: admin / password: Admin#12345 (bcrypt)
 -- ---------------------------------------------------------------------
 INSERT INTO users (username, password, role, status)
-SELECT 'admin', '$2y$10$92Iun1J0v8H4kU8s5m3zVeQyQwq2mQ0m3E4kzYQxK9c1yA9m4Kx1S', 'admin', 'approved'
+SELECT 'admin', '$2y$10$FK0rBqFTgPwxWdHOvVtBr.7u5xc3xs5K3R0J4yK.eK4VJ6qkGXfVe', 'admin', 'approved'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
+-- ---------------------------------------------------------------------
+-- 13. VIEW RELASIONAL ALAMI 3NF (v_personel_lengkap)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE VIEW v_personel_lengkap AS
+SELECT 
+    p.id,
+    p.nrp,
+    p.nama,
+    p.pangkat_id,
+    mp.kode AS pangkat_kode,
+    mp.nama AS pangkat_nama,
+    mp.singkatan AS pangkat,
+    mp.singkatan AS pangkat_singkatan,
+    mp.golongan,
+    mp.golongan AS pangkat_golongan,
+    mp.bup_usia,
+    p.korp_id,
+    mk.kode AS korp,
+    mk.kode AS korp_kode,
+    mk.nama AS korp_nama,
+    mk.kategori AS korp_kategori,
+    p.satuan_id,
+    ms.kode AS satuan_kode,
+    ms.nama AS satuan,
+    ms.nama AS satuan_nama,
+    ms.lokasi AS satuan_lokasi,
+    COALESCE(ms.kotama_id, p.kotama_id) AS kotama_id,
+    mkot.kode AS kotama_kode,
+    mkot.nama AS kotama,
+    mkot.nama AS kotama_nama,
+    mkot.tipe AS kotama_tipe,
+    p.jabatan,
+    p.tmt_jabatan,
+    p.tmt_pangkat,
+    p.tanggal_lahir,
+    p.tempat_lahir,
+    p.jenis_kelamin,
+    p.agama,
+    p.status_kawin,
+    p.alamat,
+    p.no_hp,
+    p.email,
+    p.foto,
+    p.status_dinas,
+    p.tmt_pensiun_proyeksi,
+    u.id AS user_id,
+    u.username,
+    u.role AS user_role,
+    u.status AS user_status,
+    u.last_login,
+    p.created_at,
+    p.updated_at
+FROM personel p
+LEFT JOIN master_pangkat mp ON p.pangkat_id = mp.id
+LEFT JOIN master_korp mk ON p.korp_id = mk.id
+LEFT JOIN master_satuan ms ON p.satuan_id = ms.id
+LEFT JOIN master_kotama mkot ON COALESCE(ms.kotama_id, p.kotama_id) = mkot.id
+LEFT JOIN users u ON u.personel_id = p.id;
+
+-- ---------------------------------------------------------------------
 SET foreign_key_checks = 1;
+

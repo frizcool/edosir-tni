@@ -45,7 +45,7 @@ if ($q !== '') {
 }
 
 if ($satuan !== '') {
-    $where .= " AND p.satuan = ?";
+    $where .= " AND ms.nama = ?";
     $params[] = $satuan;
 }
 
@@ -59,6 +59,7 @@ $countSql = "
     SELECT COUNT(*) 
     FROM dosir_files f
     JOIN personel p ON p.id = f.personel_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
     JOIN dosir_master m ON m.kode = f.dosir_kode
     $where
 ";
@@ -72,11 +73,13 @@ $offset = ($page - 1) * $perPage;
 
 // 2. Ambil data dengan LIMIT & OFFSET paginasi
 $sql = "
-    SELECT f.*, p.nama, p.nrp, p.pangkat, p.satuan, m.nama_dosir,
+    SELECT f.*, p.nama, p.nrp, mp.singkatan as pangkat, ms.nama as satuan, m.nama_dosir,
            u_ver.username as verifikator_username,
            p_ver.nama as verifikator_nama
     FROM dosir_files f
     JOIN personel p ON p.id = f.personel_id
+    LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
     JOIN dosir_master m ON m.kode = f.dosir_kode
     LEFT JOIN users u_ver ON u_ver.id = f.verified_by
     LEFT JOIN personel p_ver ON p_ver.id = u_ver.personel_id
@@ -89,7 +92,7 @@ $stmt->execute($params);
 $list = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Data opsi dropdown
-$satuanOptions = $pdo->query("SELECT DISTINCT satuan FROM personel WHERE satuan IS NOT NULL AND satuan != '' ORDER BY satuan ASC")->fetchAll(PDO::FETCH_COLUMN);
+$satuanOptions = $pdo->query("SELECT DISTINCT ms.nama FROM master_satuan ms JOIN personel p ON p.satuan_id = ms.id ORDER BY ms.nama ASC")->fetchAll(PDO::FETCH_COLUMN);
 $dosirMasterList = $pdo->query("SELECT kode, nama_dosir FROM dosir_master ORDER BY urutan ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = 'Verifikasi Dokumen Dosir';

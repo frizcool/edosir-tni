@@ -9,8 +9,18 @@ $satuan = trim($_GET['satuan'] ?? '');
 $golongan = trim($_GET['golongan'] ?? '');
 $statusDinas = trim($_GET['status_dinas'] ?? '');
 
-$sql = "SELECT p.*, u.status as status_user, u.username 
+$sql = "SELECT p.*, 
+               mp.singkatan as pangkat,
+               mp.golongan,
+               mk.kode as korp,
+               ms.nama as satuan,
+               mkot.nama as kotama,
+               u.status as status_user, u.username 
         FROM personel p 
+        LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+        LEFT JOIN master_korp mk ON mk.id = p.korp_id
+        LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
+        LEFT JOIN master_kotama mkot ON COALESCE(ms.kotama_id, p.kotama_id) = mkot.id
         LEFT JOIN users u ON u.personel_id = p.id 
         WHERE 1=1";
 $params = [];
@@ -21,11 +31,11 @@ if ($q !== '') {
     $params[] = "%$q%";
 }
 if ($satuan !== '') {
-    $sql .= " AND p.satuan = ?";
+    $sql .= " AND ms.nama = ?";
     $params[] = $satuan;
 }
 if ($golongan !== '') {
-    $sql .= " AND p.golongan = ?";
+    $sql .= " AND mp.golongan = ?";
     $params[] = $golongan;
 }
 if ($statusDinas !== '') {
@@ -33,7 +43,7 @@ if ($statusDinas !== '') {
     $params[] = $statusDinas;
 }
 
-$sql .= " ORDER BY p.satuan ASC, p.golongan ASC, p.nama ASC";
+$sql .= " ORDER BY ms.nama ASC, mp.urutan ASC, p.nama ASC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $list = $stmt->fetchAll();

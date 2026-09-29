@@ -29,10 +29,11 @@ $persenTargetTercapai = round(($totalDosirApproved / $totalTargetBerkas) * 100, 
 
 // --- 2. DISTRIBUSI GOLONGAN (UNTUK DONUT CHART) ---
 $golList = $pdo->query("
-    SELECT golongan, COUNT(*) as jml 
-    FROM personel 
-    WHERE status_dinas='Aktif' 
-    GROUP BY golongan
+    SELECT mp.golongan, COUNT(*) as jml 
+    FROM personel p 
+    JOIN master_pangkat mp ON mp.id = p.pangkat_id
+    WHERE p.status_dinas='Aktif' 
+    GROUP BY mp.golongan
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
 
 $golColors = [
@@ -66,21 +67,23 @@ foreach (['Perwira','Bintara','Tamtama','PNS'] as $g) {
 
 // --- 3. KELENGKAPAN PER SATUAN (TOP 5 SATUAN) ---
 $satuanStats = $pdo->query("
-    SELECT p.satuan, COUNT(DISTINCT p.id) as total_p,
+    SELECT ms.nama as satuan, COUNT(DISTINCT p.id) as total_p,
            COUNT(DISTINCT CASE WHEN f.status='approved' THEN CONCAT(p.id, '_', f.dosir_kode) END) as total_app
     FROM personel p
+    JOIN master_satuan ms ON ms.id = p.satuan_id
     LEFT JOIN dosir_files f ON f.personel_id = p.id
-    WHERE p.status_dinas='Aktif' AND p.satuan IS NOT NULL AND p.satuan != ''
-    GROUP BY p.satuan
+    WHERE p.status_dinas='Aktif' AND ms.nama IS NOT NULL AND ms.nama != ''
+    GROUP BY ms.nama
     ORDER BY total_p DESC
     LIMIT 5
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // --- 4. BERKAS DOSIR PENDING TERBARU (QUICK ACTION) ---
 $recentPendingFiles = $pdo->query("
-    SELECT f.*, p.nama, p.nrp, p.satuan, m.nama_dosir
+    SELECT f.*, p.nama, p.nrp, ms.nama as satuan, m.nama_dosir
     FROM dosir_files f
     JOIN personel p ON p.id = f.personel_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
     JOIN dosir_master m ON m.kode = f.dosir_kode
     WHERE f.status = 'pending'
     ORDER BY f.uploaded_at DESC
@@ -99,9 +102,10 @@ $recentLogs = $pdo->query("
 
 // --- 6. PREDIKSI PENSIUN & ROTASI JABATAN (OPTIMASI QUERY SQL TERINDEX) ---
 $stmtPensiun = $pdo->prepare("
-    SELECT p.*, p.tmt_pensiun_proyeksi as tgl_pensiun,
+    SELECT p.*, mp.golongan, p.tmt_pensiun_proyeksi as tgl_pensiun,
            TIMESTAMPDIFF(MONTH, CURDATE(), p.tmt_pensiun_proyeksi) as sisa_bulan
     FROM personel p
+    LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
     WHERE p.status_dinas = 'Aktif'
       AND p.tmt_pensiun_proyeksi IS NOT NULL
       AND p.tmt_pensiun_proyeksi <= DATE_ADD(CURDATE(), INTERVAL 24 MONTH)

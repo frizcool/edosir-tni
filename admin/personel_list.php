@@ -8,14 +8,14 @@ $satuan = trim($_GET['satuan'] ?? '');
 $totalWajibDosir = (int)$pdo->query("SELECT COUNT(*) FROM dosir_master WHERE wajib=1")->fetchColumn() ?: 33;
 
 // Hitung total rekord untuk paginasi
-$countSql = "SELECT COUNT(DISTINCT p.id) FROM personel p WHERE 1=1";
+$countSql = "SELECT COUNT(DISTINCT p.id) FROM personel p LEFT JOIN master_satuan ms ON ms.id = p.satuan_id WHERE 1=1";
 $countParams = [];
 if ($q !== '') {
     $countSql .= " AND (p.nama LIKE ? OR p.nrp LIKE ?)";
     $countParams[] = "%$q%"; $countParams[] = "%$q%";
 }
 if ($satuan !== '') {
-    $countSql .= " AND p.satuan = ?";
+    $countSql .= " AND ms.nama = ?";
     $countParams[] = $satuan;
 }
 $stmtCount = $pdo->prepare($countSql);
@@ -30,8 +30,13 @@ $offset = ($page - 1) * $perPage;
 
 $sql = "
     SELECT p.*,
+           mp.singkatan as pangkat,
+           mp.golongan,
+           ms.nama as satuan,
            COUNT(DISTINCT CASE WHEN f.status='approved' AND m.wajib=1 THEN f.dosir_kode END) as terisi_dosir
     FROM personel p
+    LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
     LEFT JOIN dosir_files f ON f.personel_id = p.id
     LEFT JOIN dosir_master m ON m.kode = f.dosir_kode
     WHERE 1=1
@@ -42,7 +47,7 @@ if ($q !== '') {
     $params[] = "%$q%"; $params[] = "%$q%";
 }
 if ($satuan !== '') {
-    $sql .= " AND p.satuan = ?";
+    $sql .= " AND ms.nama = ?";
     $params[] = $satuan;
 }
 $sql .= " GROUP BY p.id ORDER BY p.nama ASC LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;
@@ -50,7 +55,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $list = $stmt->fetchAll();
 
-$satuanOptions = $pdo->query("SELECT DISTINCT satuan FROM personel WHERE satuan IS NOT NULL AND satuan<>'' ORDER BY satuan")->fetchAll(PDO::FETCH_COLUMN);
+$satuanOptions = $pdo->query("SELECT DISTINCT ms.nama FROM master_satuan ms JOIN personel p ON p.satuan_id = ms.id ORDER BY ms.nama")->fetchAll(PDO::FETCH_COLUMN);
 
 $pageTitle = 'Data Personel';
 include __DIR__ . '/../includes/header.php';

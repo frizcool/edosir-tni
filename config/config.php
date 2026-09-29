@@ -5,7 +5,37 @@
 date_default_timezone_set('Asia/Jakarta');
 
 define('APP_ROOT', dirname(__DIR__));
-define('BASE_URL', '/edosir-tni'); // sesuaikan dengan path instalasi di server
+
+// Deteksi BASE_URL otomatis (Kompatibel dengan Localhost Subfolder & Hosting Root/Domain)
+if (!defined('BASE_URL')) {
+    $envBase = getenv('BASE_URL');
+    if ($envBase !== false) {
+        define('BASE_URL', rtrim($envBase, '/'));
+    } else {
+        $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT']) ?: $_SERVER['DOCUMENT_ROOT']) : '';
+        $appRoot = str_replace('\\', '/', APP_ROOT);
+        if ($docRoot && strpos($appRoot, $docRoot) === 0) {
+            $subPath = substr($appRoot, strlen($docRoot));
+            define('BASE_URL', rtrim($subPath, '/'));
+        } else {
+            define('BASE_URL', '/edosir-tni');
+        }
+    }
+}
+
+// Pengaturan Pelaporan Error (Aman untuk Hosting Produksi, Mencegah Kebocoran Informasi)
+$isProduction = (getenv('APP_ENV') === 'production') || (isset($_SERVER['SERVER_NAME']) && !in_array($_SERVER['SERVER_NAME'], ['localhost', '127.0.0.1', '::1'], true));
+if ($isProduction) {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+    ini_set('log_errors', '1');
+    error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
+} else {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    ini_set('log_errors', '1');
+    error_reporting(E_ALL);
+}
 
 define('UPLOAD_DIR', APP_ROOT . '/uploads');
 define('BACKUP_DIR', APP_ROOT . '/backups');

@@ -1,23 +1,50 @@
-# Berkas sensitif & upload dinamis (privasi data prajurit)
+# =====================================================================
+# .gitignore - TRISULA TNI AD (Production Hosting & Clean Repository)
+# =====================================================================
+
+# 1. Konfigurasi Sensitif Lokal (Hosting / Server Credentials)
+config/database.local.php
+config.local.php
+.env
+.env.*
+!.env.example
+
+# 2. Berkas Berkas Upload Dinamis & Dokumen Rahasia Prajurit
 uploads/*
 !uploads/.htaccess
 !uploads/.gitkeep
-!uploads/raw/
-!uploads/raw/.gitkeep
 uploads/raw/*
-!uploads/foto_profil/
-!uploads/foto_profil/.gitkeep
+!uploads/raw/.gitkeep
 uploads/foto_profil/*
+!uploads/foto_profil/.gitkeep
+*.pdf
+!vendor/**/*.pdf
 
-# Cadangan database & file ekspor
+# 3. Cadangan Database & Arsip Ekspor Sementara
 backups/*
 !backups/.gitkeep
+!backups/.htaccess
 exports/*
 !exports/.gitkeep
+!exports/.htaccess
 
-# System & IDE files
+# 4. Berkas Dokumentasi Internal & Diagram (Tidak Perlu di GitHub / Hosting)
+flowchart/
+DOKUMENTASI_SISTEM_TRISULA_TNI_AD.*
+generate_dokumentasi_word.php
+assets/img/reference_login.png
+
+# 5. Skrip Migrasi & Analisis Basis Data Sementara (Dev Scripts)
+# Catatan: sql/schema.sql tetap disertakan sebagai master DDL pangkalan data
+sql/*.php
+
+# 6. Sistem Operasi, Editor & Temporary Logs
 .DS_Store
 Thumbs.db
+ehthumbs.db
+desktop.ini
 *.log
+*.tmp
+*.bak
 .vscode/
 .idea/

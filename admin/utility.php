@@ -386,15 +386,18 @@ if ($tab === 'kotama') {
     $stmtKrp = $pdo->prepare($krpSql);
     $stmtKrp->execute($krpParams);
     $korpList = $stmtKrp->fetchAll(PDO::FETCH_ASSOC);
-} elseif ($tab === 'sync') {
     $unlinkedPersonel = $pdo->query("
-        SELECT p.id, p.nrp, p.nama, p.golongan, p.pangkat, p.pangkat_id,
-               p.korp, p.korp_id, p.satuan, p.satuan_id, p.kotama, p.kotama_id
+        SELECT p.id, p.nrp, p.nama, mp.golongan, mp.singkatan as pangkat, p.pangkat_id,
+               mk.kode as korp, p.korp_id, ms.nama as satuan, p.satuan_id, mkot.nama as kotama, p.kotama_id
         FROM personel p
+        LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+        LEFT JOIN master_korp mk ON mk.id = p.korp_id
+        LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
+        LEFT JOIN master_kotama mkot ON COALESCE(ms.kotama_id, p.kotama_id) = mkot.id
         WHERE p.pangkat_id IS NULL 
-           OR (p.golongan != 'PNS' AND p.korp_id IS NULL)
+           OR (mp.golongan != 'PNS' AND p.korp_id IS NULL)
            OR p.satuan_id IS NULL 
-           OR p.kotama_id IS NULL
+           OR (p.kotama_id IS NULL AND ms.kotama_id IS NULL)
         ORDER BY p.nama ASC
         LIMIT 50
     ")->fetchAll(PDO::FETCH_ASSOC);

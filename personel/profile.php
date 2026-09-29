@@ -5,7 +5,7 @@ require_role('personel');
 $u = current_user();
 $personel_id = $u['personel_id'];
 
-$stmt = $pdo->prepare("SELECT * FROM personel WHERE id=?");
+$stmt = $pdo->prepare("SELECT * FROM v_personel_lengkap WHERE id=?");
 $stmt->execute([$personel_id]);
 $p = $stmt->fetch();
 

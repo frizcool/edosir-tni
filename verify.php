@@ -21,15 +21,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_FILES['berkas_uji']) && $_
         // Cari berkas yang cocok dengan signed_hash atau raw_hash
         $stmt = $pdo->prepare("
             SELECT f.*, 
-                   p.nama as nama_personel, p.nrp, p.pangkat as pangkat_personel, p.satuan as satuan_personel, p.golongan,
+                   p.nama as nama_personel, p.nrp, mp.singkatan as pangkat_personel, ms.nama as satuan_personel, mp.golongan,
                    m.nama_dosir,
                    u.username as admin_username,
-                   admin_p.nama as nama_admin, admin_p.pangkat as pangkat_admin, admin_p.nrp as nrp_admin, admin_p.satuan as satuan_admin
+                   admin_p.nama as nama_admin, admin_mp.singkatan as pangkat_admin, admin_p.nrp as nrp_admin, admin_ms.nama as satuan_admin
             FROM dosir_files f
             JOIN personel p ON p.id = f.personel_id
+            LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+            LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
             JOIN dosir_master m ON m.kode = f.dosir_kode
             LEFT JOIN users u ON u.id = f.verified_by
             LEFT JOIN personel admin_p ON admin_p.id = u.personel_id
+            LEFT JOIN master_pangkat admin_mp ON admin_mp.id = admin_p.pangkat_id
+            LEFT JOIN master_satuan admin_ms ON admin_ms.id = admin_p.satuan_id
             WHERE (f.signature_hash = ? OR f.raw_hash = ?) AND f.status = 'approved'
             LIMIT 1
         ");
@@ -46,15 +50,19 @@ elseif ($code !== '') {
     $verifySource = 'code';
     $stmt = $pdo->prepare("
         SELECT f.*, 
-               p.nama as nama_personel, p.nrp, p.pangkat as pangkat_personel, p.satuan as satuan_personel, p.golongan,
+               p.nama as nama_personel, p.nrp, mp.singkatan as pangkat_personel, ms.nama as satuan_personel, mp.golongan,
                m.nama_dosir,
                u.username as admin_username,
-               admin_p.nama as nama_admin, admin_p.pangkat as pangkat_admin, admin_p.nrp as nrp_admin, admin_p.satuan as satuan_admin
+               admin_p.nama as nama_admin, admin_mp.singkatan as pangkat_admin, admin_p.nrp as nrp_admin, admin_ms.nama as satuan_admin
         FROM dosir_files f
         JOIN personel p ON p.id = f.personel_id
+        LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+        LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
         JOIN dosir_master m ON m.kode = f.dosir_kode
         LEFT JOIN users u ON u.id = f.verified_by
         LEFT JOIN personel admin_p ON admin_p.id = u.personel_id
+        LEFT JOIN master_pangkat admin_mp ON admin_mp.id = admin_p.pangkat_id
+        LEFT JOIN master_satuan admin_ms ON admin_ms.id = admin_p.satuan_id
         WHERE f.signature_code = ?
     ");
     $stmt->execute([$code]);

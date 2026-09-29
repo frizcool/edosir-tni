@@ -31,8 +31,7 @@ $mimeType = 'application/pdf';
 if ($record) {
     // Cek Otorisasi: Admin boleh lihat semua, personel HANYA dosirnya sendiri
     if ($u['role'] !== 'admin' && (int)$record['personel_id'] !== (int)($u['personel_id'] ?? 0)) {
-        http_response_code(403);
-        die('Akses Ditolak: Anda tidak memiliki hak untuk melihat berkas prajurit lain.');
+        abort(403, 'Akses Ditolak: Anda tidak memiliki hak wewenang untuk melihat berkas arsip prajurit lain.', 'Pelanggaran Privasi Berkas');
     }
     $targetPhysicalPath = UPLOAD_DIR . '/' . $record['file_path'];
 } else {
@@ -60,8 +59,7 @@ if ($record) {
 }
 
 if (!$targetPhysicalPath || !file_exists($targetPhysicalPath)) {
-    http_response_code(404);
-    die('Berkas tidak ditemukan atau telah dipindahkan dari arsip.');
+    abort(404, 'Berkas dosir fisik tidak ditemukan pada sistem penyimpanan atau telah dipindahkan dari arsip.');
 }
 
 // Pencegahan Directory Traversal
@@ -69,8 +67,7 @@ $realUploadDir = realpath(UPLOAD_DIR);
 $realTarget    = realpath($targetPhysicalPath);
 
 if (!$realTarget || strpos($realTarget, $realUploadDir) !== 0) {
-    http_response_code(403);
-    die('Akses ditolak: Percobaan akses path di luar direktori aman.');
+    abort(403, 'Akses ditolak: Percobaan akses path di luar direktori aman terdeteksi.', 'Directory Traversal Prevented');
 }
 
 // Alirkan berkas ke browser

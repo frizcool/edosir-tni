@@ -6,15 +6,15 @@ $admin = current_user();
 $id = (int) ($_GET['id'] ?? 0);
 $stmt = $pdo->prepare("
     SELECT p.*,
-           mp.nama as pangkat_resmi, mp.bup_usia as pangkat_bup,
-           mk.nama as korp_nama, mk.kategori as korp_kategori,
-           ms.nama as satuan_nama, ms.lokasi as satuan_lokasi,
-           mkot.nama as kotama_nama, mkot.tipe as kotama_tipe
+           mp.nama as pangkat_resmi, mp.singkatan as pangkat, mp.bup_usia as pangkat_bup, mp.golongan,
+           mk.kode as korp, mk.nama as korp_nama, mk.kategori as korp_kategori,
+           ms.nama as satuan, ms.nama as satuan_nama, ms.lokasi as satuan_lokasi,
+           mkot.nama as kotama, mkot.nama as kotama_nama, mkot.tipe as kotama_tipe
     FROM personel p
     LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
     LEFT JOIN master_korp mk ON mk.id = p.korp_id
     LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
-    LEFT JOIN master_kotama mkot ON mkot.id = p.kotama_id
+    LEFT JOIN master_kotama mkot ON COALESCE(ms.kotama_id, p.kotama_id) = mkot.id
     WHERE p.id = ?
 ");
 $stmt->execute([$id]);

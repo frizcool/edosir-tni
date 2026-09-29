@@ -1,0 +1,559 @@
+/* =====================================================================
+   TRISULA TNI AD - MODERN TACTICAL ERROR HANDLING STYLES
+   401 Unauthorized | 403 Forbidden | 404 Not Found | 500 Server Error
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --primary-gold: #d4af37;
+  --primary-gold-bright: #ffd700;
+  
+  --tni-green-dark: #06130b;
+  --tni-green-deep: #091a10;
+  --tni-green-accent: #235535;
+  
+  --text-white: #ffffff;
+  --text-muted: #b0c0b4;
+  --text-dim: #728577;
+  
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-tech: 'Rajdhani', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  
+  /* Status Colors: Default (404) */
+  --status-color: #38bdf8;
+  --status-glow: rgba(56, 189, 248, 0.45);
+  --status-bg-pill: rgba(56, 189, 248, 0.12);
+  --status-border-pill: rgba(56, 189, 248, 0.35);
+  --card-border: rgba(56, 189, 248, 0.3);
+}
+
+/* 401 Unauthorized Theme (Amber / Gold) */
+body[data-error="401"] {
+  --status-color: #fbbf24;
+  --status-glow: rgba(251, 191, 36, 0.45);
+  --status-bg-pill: rgba(251, 191, 36, 0.14);
+  --status-border-pill: rgba(251, 191, 36, 0.4);
+  --card-border: rgba(212, 175, 55, 0.35);
+}
+
+/* 403 Forbidden Theme (Tactical Crimson Red) */
+body[data-error="403"] {
+  --status-color: #f87171;
+  --status-glow: rgba(248, 113, 113, 0.5);
+  --status-bg-pill: rgba(239, 68, 68, 0.15);
+  --status-border-pill: rgba(248, 113, 113, 0.45);
+  --card-border: rgba(239, 68, 68, 0.35);
+}
+
+/* 404 Not Found Theme (Radar Cyan / Green) */
+body[data-error="404"] {
+  --status-color: #4ade80;
+  --status-glow: rgba(74, 222, 128, 0.45);
+  --status-bg-pill: rgba(74, 222, 128, 0.12);
+  --status-border-pill: rgba(74, 222, 128, 0.35);
+  --card-border: rgba(74, 222, 128, 0.3);
+}
+
+/* 500 Internal Server Error Theme (High-Alert Orange/Red) */
+body[data-error="500"] {
+  --status-color: #fb923c;
+  --status-glow: rgba(251, 146, 60, 0.5);
+  --status-bg-pill: rgba(249, 115, 22, 0.16);
+  --status-border-pill: rgba(251, 146, 60, 0.45);
+  --card-border: rgba(249, 115, 22, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  font-family: var(--font-main);
+  background-color: var(--tni-green-dark);
+  color: var(--text-white);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =====================================================================
+   ERROR FULLPAGE WRAPPER
+   ===================================================================== */
+.error-wrapper {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #06130b;
+  background-image: url('../img/bg-trisula.png');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  overflow: hidden;
+}
+
+/* Dark Tactical Vignette Overlay */
+.error-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(5, 14, 10, 0.65) 0%, rgba(2, 8, 4, 0.88) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Cyber Telemetry Scanlines */
+.error-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Background Radar Canvas */
+#radarCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* =====================================================================
+   TOP BRANDING HEADER
+   ===================================================================== */
+.error-topbar {
+  position: relative;
+  z-index: 10;
+  height: 74px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  background: rgba(6, 18, 11, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #fff;
+  transition: transform 0.2s ease;
+}
+
+.brand-link:hover {
+  transform: translateY(-1px);
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-title {
+  font-family: var(--font-tech);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+
+.brand-sub {
+  font-size: 10.5px;
+  letter-spacing: 2px;
+  color: var(--primary-gold);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.topbar-right-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+.system-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.status-beacon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--status-color);
+  box-shadow: 0 0 10px var(--status-color);
+  animation: pulseBeacon 1.8s infinite;
+}
+
+@keyframes pulseBeacon {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* =====================================================================
+   CENTER ERROR CONTAINER & GLASS CARD
+   ===================================================================== */
+.error-main {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 50px;
+  perspective: 1200px;
+}
+
+.error-card-container {
+  width: 100%;
+  max-width: 620px;
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease-out;
+}
+
+.error-card {
+  position: relative;
+  background: rgba(9, 23, 15, 0.78);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--card-border);
+  border-radius: 22px;
+  box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.85), 0 0 35px var(--status-glow);
+  padding: 40px 36px 36px;
+  overflow: hidden;
+  text-align: center;
+  animation: cardPopIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Card Top Glowing Status Edge */
+.error-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--status-color), transparent);
+  box-shadow: 0 0 14px var(--status-color);
+}
+
+@keyframes cardPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(28px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Status Code Pill Badge */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: var(--status-bg-pill);
+  border: 1px solid var(--status-border-pill);
+  border-radius: 24px;
+  font-family: var(--font-tech);
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--status-color);
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  box-shadow: 0 0 15px var(--status-glow);
+}
+
+.status-pill svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Big Holographic Status Number */
+.error-code-wrapper {
+  position: relative;
+  display: inline-block;
+  margin: 4px 0 14px;
+}
+
+.error-code-number {
+  font-family: var(--font-tech);
+  font-size: 96px;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: 4px;
+  color: #ffffff;
+  text-shadow: 0 0 30px var(--status-glow), 0 4px 12px rgba(0, 0, 0, 0.8);
+  position: relative;
+  display: inline-block;
+}
+
+.error-code-number::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--status-color);
+  opacity: 0.35;
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+  animation: glitchSweep 4s infinite alternate;
+}
+
+@keyframes glitchSweep {
+  0% { transform: translate(0); }
+  92% { transform: translate(0); }
+  94% { transform: translate(-2px, 1px); }
+  96% { transform: translate(2px, -1px); }
+  98% { transform: translate(-1px, 2px); }
+  100% { transform: translate(0); }
+}
+
+/* Error Headings & Text */
+.error-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.4px;
+  margin-bottom: 12px;
+}
+
+.error-description {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 500px;
+  margin: 0 auto 24px;
+}
+
+/* =====================================================================
+   TACTICAL DIAGNOSTIC REFERENCE BOX
+   ===================================================================== */
+.tactical-diagnostic-box {
+  background: rgba(4, 12, 8, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 3px solid var(--status-color);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 0 auto 28px;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.diagnostic-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.diagnostic-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.diagnostic-label {
+  color: var(--text-dim);
+}
+
+.diagnostic-value {
+  color: #e5ece6;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.diagnostic-incident-code {
+  color: var(--status-color);
+  font-weight: 600;
+}
+
+/* =====================================================================
+   ACTION BUTTONS
+   ===================================================================== */
+.error-actions-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.error-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 24px;
+  border-radius: 11px;
+  font-family: var(--font-main);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Primary Action Button */
+.error-btn-primary {
+  background: var(--status-color);
+  color: #06130b;
+  border: 1px solid #ffffff;
+  box-shadow: 0 4px 16px var(--status-glow);
+}
+
+.error-btn-primary:hover {
+  background: #ffffff;
+  color: #06130b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--status-glow);
+}
+
+/* Secondary Action Button (Frosted Glass) */
+.error-btn-secondary {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.error-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Outline Ghost Button */
+.error-btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.error-btn-ghost:hover {
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.error-btn svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+/* Ripple click effect */
+.btn-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(0);
+  animation: errorRipple 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes errorRipple {
+  to { transform: scale(4); opacity: 0; }
+}
+
+/* =====================================================================
+   FOOTER
+   ===================================================================== */
+.error-footer {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 16px 20px 24px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.error-footer strong {
+  color: var(--primary-gold);
+}
+
+/* =====================================================================
+   RESPONSIVE DESIGN
+   ===================================================================== */
+@media (max-width: 768px) {
+  .error-topbar {
+    padding: 0 20px;
+    height: 66px;
+  }
+
+  .topbar-right-info {
+    display: none;
+  }
+
+  .error-card {
+    padding: 30px 22px 26px;
+    border-radius: 18px;
+  }
+
+  .error-code-number {
+    font-size: 78px;
+  }
+
+  .error-title {
+    font-size: 19px;
+  }
+
+  .error-actions-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .error-btn {
+    width: 100%;
+  }
+
+  .tactical-diagnostic-box {
+    font-size: 11px;
+    padding: 12px 14px;
+  }
+}

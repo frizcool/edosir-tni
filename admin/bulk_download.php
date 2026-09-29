@@ -6,7 +6,7 @@ $admin = current_user();
 $dosirList = get_dosir_master($pdo);
 $personelPreset = (int) ($_GET['personel_id'] ?? 0);
 
-$satuanOptions = $pdo->query("SELECT DISTINCT satuan FROM personel WHERE satuan IS NOT NULL AND satuan<>'' ORDER BY satuan")->fetchAll(PDO::FETCH_COLUMN);
+$satuanOptions = $pdo->query("SELECT DISTINCT ms.nama FROM master_satuan ms JOIN personel p ON p.satuan_id = ms.id ORDER BY ms.nama")->fetchAll(PDO::FETCH_COLUMN);
 $personelOptions = $pdo->query("SELECT id, nama, nrp FROM personel ORDER BY nama")->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/admin/bulk_download.php');
     }
 
-    $sql = "SELECT f.*, p.nrp, p.nama FROM dosir_files f JOIN personel p ON p.id=f.personel_id WHERE 1=1";
+    $sql = "SELECT f.*, p.nrp, p.nama FROM dosir_files f JOIN personel p ON p.id=f.personel_id LEFT JOIN master_satuan ms ON ms.id=p.satuan_id WHERE 1=1";
     $params = [];
 
     $inKode = implode(',', array_fill(0, count($kodeTerpilih), '?'));
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sql .= " AND f.personel_id IN ($inP)";
         $params = array_merge($params, $personelTerpilih);
     } elseif ($satuan !== '') {
-        $sql .= " AND p.satuan = ?";
+        $sql .= " AND ms.nama = ?";
         $params[] = $satuan;
     }
 

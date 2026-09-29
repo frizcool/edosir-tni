@@ -45,25 +45,24 @@ edosir-tni/
 └── composer.json          dependensi watermark PDF (FPDI + TCPDF)
 ```
 
-## 3. Instalasi
-1. Salin seluruh folder ke web server (Apache/Nginx + PHP 8+, ekstensi `pdo_mysql`, `zip`, `fileinfo` aktif).
-2. Buat database dan import skema:
+## 3. Panduan Instalasi & Hosting
+1. Salin / clone repositori ke web server (Apache/Nginx/cPanel + PHP 8.1+, ekstensi `pdo_mysql`, `gd`, `zip`, `fileinfo` aktif).
+2. Buat database baru di MySQL/phpMyAdmin, lalu impor skema:
+   ```bash
+   mysql -u root -p edosir_tni < sql/schema.sql
    ```
-   mysql -u root -p < sql/schema.sql
-   ```
-3. Sesuaikan kredensial di `config/database.php` dan nilai `BASE_URL` di `config/config.php`
-   (path instalasi relatif, contoh `/edosir-tni`).
-4. Buat password admin awal yang valid:
-   ```
-   php generate_admin_password.php Admin#12345Baru
-   ```
-   lalu jalankan query `UPDATE` yang ditampilkan agar akun `admin` bisa login.
-5. Pastikan folder `uploads/`, `backups/`, `exports/` dapat ditulis oleh web server (`chmod 775`).
-6. (Opsional, untuk watermark otomatis) pasang dependensi:
-   ```
-   composer require setasign/fpdi tecnickcom/tcpdf
-   ```
-   Tanpa langkah ini, verifikasi tetap berjalan normal namun watermark visual pada PDF tidak diterapkan.
+3. Konfigurasi koneksi database:
+   - Salin `config/database.example.php` menjadi `config/database.local.php`, lalu sesuaikan kredensial database hosting Anda.
+   - Atau atur via Environment Variables (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`).
+   - Nilai `BASE_URL` telah diatur untuk **otomatis terdeteksi** (baik dijalankan di root domain hosting maupun di subfolder seperti `/edosir-tni`).
+4. Kredensial Akun Administrator Awal:
+   - **Username**: `admin`
+   - **Password**: `Admin#12345`
+   *(Segera ubah kata sandi administrator setelah login pertama kali di menu Pengaturan / Profil).*
+5. Izin Direktori Penyimpanan:
+   - Pastikan direktori `uploads/`, `uploads/raw/`, `uploads/foto_profil/`, `backups/`, dan `exports/` memiliki izin tulis oleh web server (`chmod -R 775`).
+6. Ketergantungan PDF & TTE (Vendor):
+   - Pustaka `setasign/fpdi` dan `tecnickcom/tcpdf` sudah terpasang di folder `vendor/` untuk penerbitan Tanda Tangan Elektronik (TTE) & QR Code.
 7. (Opsional, untuk backup database via tombol admin) pastikan binary `mysqldump` tersedia di PATH server
    dan fungsi `exec()` tidak dinonaktifkan di `php.ini`.
 

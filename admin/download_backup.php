@@ -5,8 +5,7 @@ require_admin();
 $fileName = basename(trim($_GET['file'] ?? ''));
 
 if ($fileName === '') {
-    http_response_code(400);
-    die('Nama berkas cadangan tidak valid.');
+    abort(400, 'Nama berkas cadangan (backup) tidak valid atau kosong.');
 }
 
 $filePath = BACKUP_DIR . '/' . $fileName;
@@ -15,8 +14,7 @@ $realBackupDir = realpath(BACKUP_DIR);
 $realTarget    = realpath($filePath);
 
 if (!$realTarget || strpos($realTarget, $realBackupDir) !== 0 || !file_exists($realTarget)) {
-    http_response_code(404);
-    die('Berkas cadangan tidak ditemukan.');
+    abort(404, 'Berkas cadangan (backup) tidak ditemukan pada direktori penyimpanan server.');
 }
 
 $ext = strtolower(pathinfo($realTarget, PATHINFO_EXTENSION));

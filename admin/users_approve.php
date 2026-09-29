@@ -44,8 +44,11 @@ $page = max(1, (int)($_GET['page'] ?? 1));
 
 // Query akun pending
 $pending = $pdo->query("
-    SELECT u.*, p.nama, p.nrp, p.pangkat, p.satuan
-    FROM users u LEFT JOIN personel p ON p.id = u.personel_id
+    SELECT u.*, p.nama, p.nrp, mp.singkatan as pangkat, ms.nama as satuan
+    FROM users u 
+    LEFT JOIN personel p ON p.id = u.personel_id
+    LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
     WHERE u.status = 'pending' AND u.role = 'personel'
     ORDER BY u.created_at ASC
 ")->fetchAll();
@@ -80,8 +83,11 @@ $page = min($page, $totalPagesAll);
 $offsetAll = ($page - 1) * $perPage;
 
 $sqlAll = "
-    SELECT u.*, p.nama, p.nrp, p.pangkat, p.satuan, p.id as p_id
-    FROM users u LEFT JOIN personel p ON p.id = u.personel_id
+    SELECT u.*, p.nama, p.nrp, mp.singkatan as pangkat, ms.nama as satuan, p.id as p_id
+    FROM users u 
+    LEFT JOIN personel p ON p.id = u.personel_id
+    LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+    LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
     $whereAll
     ORDER BY u.updated_at DESC
     LIMIT $perPage OFFSET $offsetAll

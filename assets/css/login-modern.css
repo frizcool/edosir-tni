@@ -1,0 +1,1075 @@
+/* =====================================================================
+   TRISULA TNI AD - MODERN ANIMATED LOGIN
+   Glassmorphism UI, Tactical Military Aesthetics & Smooth Animations
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap');
+
+:root {
+  --primary-gold: #d4af37;
+  --primary-gold-bright: #ffd700;
+  --primary-gold-glow: rgba(212, 175, 55, 0.35);
+  
+  --tni-green-dark: #07150e;
+  --tni-green-mid: #0f2418;
+  --tni-green-accent: #245838;
+  --tni-green-glow: rgba(36, 88, 56, 0.4);
+
+  --glass-card-bg: rgba(10, 24, 17, 0.72);
+  --glass-card-border: rgba(212, 175, 55, 0.28);
+  --glass-card-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(20, 60, 35, 0.35);
+  
+  --glass-input-bg: rgba(5, 14, 10, 0.55);
+  --glass-input-border: rgba(255, 255, 255, 0.14);
+  --glass-input-focus: rgba(212, 175, 55, 0.8);
+  
+  --text-white: #ffffff;
+  --text-muted: #b0c0b4;
+  --text-dim: #768a7c;
+  
+  --danger-color: #f87171;
+  --danger-bg: rgba(220, 38, 38, 0.2);
+  --danger-border: rgba(239, 68, 68, 0.45);
+  
+  --success-color: #4ade80;
+  --success-bg: rgba(22, 101, 52, 0.25);
+  --success-border: rgba(74, 222, 128, 0.45);
+
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-tech: 'Rajdhani', 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  font-family: var(--font-main);
+  background-color: var(--tni-green-dark);
+  color: var(--text-white);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* =====================================================================
+   BACKGROUND STYLING & HERO WRAPPER
+   ===================================================================== */
+.hero-wrapper {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #07150e;
+  background-image: url('../img/bg-trisula.png');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  overflow: hidden;
+}
+
+/* Subtle Vignette & Ambient Glow */
+.hero-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(5, 14, 10, 0.25) 0%, rgba(3, 9, 6, 0.65) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Tech Scanline Grid (subtle military telemetry overlay) */
+.hero-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.01), rgba(0, 255, 0, 0.005), rgba(0, 0, 255, 0.01));
+  background-size: 100% 4px, 6px 100%;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Interactive Particle Canvas */
+#particlesCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Interactive Cursor Ambient Glow */
+.cursor-ambient-glow {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.09) 0%, rgba(36, 88, 56, 0.06) 45%, transparent 70%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+  transition: opacity 0.5s ease;
+  mix-blend-mode: screen;
+}
+
+/* =====================================================================
+   TOP NAVIGATION BAR (MATCHING REFERENCE IMAGE 1)
+   ===================================================================== */
+.top-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 44px;
+  z-index: 50;
+  background: rgba(7, 18, 13, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
+}
+
+.top-navbar.scrolled {
+  background: rgba(5, 14, 10, 0.75);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Navbar Brand / Logo (Left) */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--text-white);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.nav-brand:hover {
+  transform: translateY(-1px);
+}
+
+.nav-brand-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  transition: transform 0.3s ease;
+}
+
+.nav-brand:hover .nav-brand-logo {
+  transform: scale(1.08) rotate(3deg);
+}
+
+.nav-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-brand-title {
+  font-family: var(--font-tech);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  background: linear-gradient(135deg, #ffffff 30%, var(--primary-gold-bright) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+.nav-brand-sub {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--primary-gold);
+  text-transform: uppercase;
+  margin-top: -2px;
+}
+
+/* Navbar Links (Right) */
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-item a,
+.nav-item button {
+  position: relative;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 6px 4px;
+  letter-spacing: 0.3px;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
+}
+
+.nav-item a:hover,
+.nav-item button:hover {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+}
+
+/* Animated Underline for Text Nav Links */
+.nav-item a.link-effect::after,
+.nav-item button.link-effect::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary-gold), var(--primary-gold-bright));
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 8px var(--primary-gold);
+}
+
+.nav-item a.link-effect:hover::after,
+.nav-item button.link-effect:hover::after {
+  width: 100%;
+}
+
+/* Login Button in Navbar (Exact Image 1 Style: Outlined Glass Pill) */
+.nav-btn-login {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 24px !important;
+  font-size: 14.5px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.6) !important;
+  border-radius: 9px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.25s ease !important;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.nav-btn-login:hover {
+  border-color: var(--primary-gold-bright) !important;
+  background: rgba(212, 175, 55, 0.18) !important;
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.45) !important;
+  transform: translateY(-1.5px);
+}
+
+.nav-btn-login.active-glow {
+  animation: pulseLoginBtn 2.2s infinite ease-in-out;
+}
+
+@keyframes pulseLoginBtn {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+    border-color: rgba(212, 175, 55, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(212, 175, 55, 0.7);
+    border-color: var(--primary-gold-bright);
+  }
+}
+
+/* Mobile Hamburger Toggle */
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.mobile-menu-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+/* =====================================================================
+   MAIN CENTER CONTENT & GLASS LOGIN CARD (MATCHING REFERENCE IMAGE 1)
+   ===================================================================== */
+.hero-content {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 100px 20px 40px;
+  perspective: 1200px;
+}
+
+/* The Card Container with 3D Tilt */
+.login-card-container {
+  width: 100%;
+  max-width: 440px;
+  transition: transform 0.15s ease-out, opacity 0.35s ease;
+  transform-style: preserve-3d;
+}
+
+/* The Glass Card */
+.glass-card {
+  position: relative;
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-card-border);
+  border-radius: 20px;
+  box-shadow: var(--glass-card-shadow);
+  padding: 38px 34px 32px;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  animation: cardEntrance 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Specular Glare Effect following Cursor */
+.glass-card-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle 320px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.12), transparent 80%);
+  pointer-events: none;
+  z-index: 2;
+  mix-blend-mode: overlay;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+/* Card Top Gold Cyber-Accent Line */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--primary-gold), var(--primary-gold-bright), transparent);
+  opacity: 0.85;
+}
+
+/* Card Entrance Animation */
+@keyframes cardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(32px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Card Dismiss (when X is clicked) */
+.login-card-container.hidden-card {
+  opacity: 0 !important;
+  transform: translateY(36px) scale(0.92) !important;
+  pointer-events: none !important;
+  visibility: hidden;
+}
+
+/* Close Button 'X' at Top Right (Exact Image 1 Position & Look) */
+.card-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.25s ease;
+}
+
+.card-close-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  transition: transform 0.25s ease;
+}
+
+.card-close-btn:hover {
+  background: rgba(212, 175, 55, 0.25);
+  border-color: var(--primary-gold-bright);
+  color: #ffffff;
+  transform: rotate(90deg) scale(1.08);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.4);
+}
+
+/* Card Header (Centered Title) */
+.card-header {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.card-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.card-subtitle {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: 0.4px;
+}
+
+/* =====================================================================
+   ALERT / NOTIFICATION MESSAGES
+   ===================================================================== */
+.auth-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 20px;
+  animation: shakeAlert 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.auth-alert-error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: #fca5a5;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.15);
+}
+
+.auth-alert-success {
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  color: #86efac;
+  box-shadow: 0 4px 14px rgba(74, 222, 128, 0.15);
+}
+
+.auth-alert svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+}
+
+@keyframes shakeAlert {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+  40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* =====================================================================
+   FORM FIELDS & INPUTS (MATCHING REFERENCE IMAGE 1)
+   ===================================================================== */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 7px;
+  letter-spacing: 0.3px;
+  transition: color 0.25s ease;
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-input {
+  width: 100%;
+  padding: 13px 44px 13px 16px;
+  background: var(--glass-input-bg);
+  border: 1px solid var(--glass-input-border);
+  border-radius: 10px;
+  color: var(--text-white);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.25s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13.5px;
+}
+
+.form-input:focus {
+  border-color: var(--glass-input-focus);
+  background: rgba(10, 26, 18, 0.7);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.form-group:focus-within .form-label {
+  color: var(--primary-gold-bright);
+}
+
+/* Input Icon on the Right (Exact Image 1 Style) */
+.input-icon-right {
+  position: absolute;
+  right: 14px;
+  color: rgba(255, 255, 255, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.form-group:focus-within .input-icon-right {
+  color: var(--primary-gold-bright);
+  transform: scale(1.1);
+}
+
+.input-icon-right svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* Password Toggle Button */
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.password-toggle-btn:hover {
+  color: #ffffff;
+  transform: scale(1.12);
+}
+
+.password-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Helper text below password */
+.form-helper {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* =====================================================================
+   REMEMBER ME & FORGOT PASSWORD ROW (MATCHING IMAGE 1)
+   ===================================================================== */
+.form-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  margin-bottom: 22px;
+  font-size: 13px;
+}
+
+/* Custom Checkbox */
+.remember-me-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.remember-me-label:hover {
+  color: #ffffff;
+}
+
+.remember-me-input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.custom-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.remember-me-input:checked ~ .custom-checkbox {
+  background: var(--primary-gold);
+  border-color: var(--primary-gold-bright);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+}
+
+.custom-checkbox svg {
+  width: 12px;
+  height: 12px;
+  stroke: #0a1b12;
+  stroke-width: 2.8;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.remember-me-input:checked ~ .custom-checkbox svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Forgot Password Link */
+.forgot-password-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.forgot-password-link:hover {
+  color: var(--primary-gold-bright);
+  text-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+}
+
+/* =====================================================================
+   LOGIN SUBMIT BUTTON (MATCHING IMAGE 1: SLEEK DARK PILL)
+   ===================================================================== */
+.btn-submit-login {
+  position: relative;
+  width: 100%;
+  padding: 13.5px 20px;
+  background: #14231b;
+  border: 1.5px solid rgba(212, 175, 55, 0.35);
+  border-radius: 11px;
+  color: #ffffff;
+  font-family: var(--font-main);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-submit-login::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  transition: left 0.6s ease;
+}
+
+.btn-submit-login:hover {
+  background: linear-gradient(135deg, #1b3527, #244934);
+  border-color: var(--primary-gold-bright);
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.35);
+  transform: translateY(-2px);
+}
+
+.btn-submit-login:hover::before {
+  left: 100%;
+}
+
+.btn-submit-login:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Loading Spinner when Submitting */
+.btn-submit-login.is-loading {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.spinner-icon {
+  width: 18px;
+  height: 18px;
+  border: 2.2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: var(--primary-gold-bright);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+
+.btn-submit-login.is-loading .spinner-icon {
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Ripple Click Effect */
+.ripple-wave {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0);
+  animation: rippleAnimation 0.6s linear;
+  pointer-events: none;
+}
+
+@keyframes rippleAnimation {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* =====================================================================
+   CARD FOOTER LINK (MATCHING IMAGE 1: "Don't have an account? Register")
+   ===================================================================== */
+.card-footer {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+.card-footer a {
+  color: var(--text-white);
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.card-footer a:hover {
+  color: var(--primary-gold-bright);
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+  text-decoration: underline;
+}
+
+/* =====================================================================
+   DISMISSED PROMPT (APPEARS WHEN USER CLOSES CARD TO ENJOY FULL ARTWORK)
+   ===================================================================== */
+.card-restore-trigger {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(50px);
+  background: rgba(10, 24, 18, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--primary-gold);
+  border-radius: 30px;
+  padding: 10px 24px;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(212, 175, 55, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 40;
+}
+
+.card-restore-trigger.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.card-restore-trigger:hover {
+  background: rgba(18, 42, 30, 0.9);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 28px rgba(212, 175, 55, 0.5);
+}
+
+.card-restore-trigger svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--primary-gold-bright);
+}
+
+/* =====================================================================
+   MODALS (ABOUT, SERVICES, CONTACT, FORGOT PASSWORD)
+   ===================================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 9, 6, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0.28s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  background: rgba(12, 28, 20, 0.92);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid var(--primary-gold);
+  border-radius: 18px;
+  padding: 32px 28px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 35px rgba(212, 175, 55, 0.25);
+  transform: scale(0.92) translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-overlay.active .modal-card {
+  transform: scale(1) translateY(0);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  background: rgba(212, 175, 55, 0.3);
+  border-color: var(--primary-gold);
+  transform: rotate(90deg);
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-right: 30px;
+}
+
+.modal-title svg {
+  width: 22px;
+  height: 22px;
+  color: var(--primary-gold-bright);
+}
+
+.modal-body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.modal-body h4 {
+  color: #ffffff;
+  font-size: 15px;
+  margin: 16px 0 6px;
+}
+
+.modal-body ul {
+  padding-left: 20px;
+  margin-top: 8px;
+}
+
+.modal-body li {
+  margin-bottom: 6px;
+}
+
+.modal-highlight-box {
+  background: rgba(212, 175, 55, 0.08);
+  border-left: 3px solid var(--primary-gold);
+  padding: 12px 16px;
+  border-radius: 0 8px 8px 0;
+  margin: 14px 0;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.modal-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modal-btn {
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-btn-primary {
+  background: var(--primary-gold);
+  color: #07150e;
+  border: 1px solid var(--primary-gold-bright);
+}
+
+.modal-btn-primary:hover {
+  background: var(--primary-gold-bright);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.modal-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.modal-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* =====================================================================
+   RESPONSIVE DESIGN (TABLETS & PHONES)
+   ===================================================================== */
+@media (max-width: 900px) {
+  .top-navbar {
+    padding: 0 20px;
+    height: 68px;
+  }
+  
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 68px;
+    left: 0;
+    right: 0;
+    background: rgba(7, 18, 13, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    flex-direction: column;
+    padding: 24px 20px;
+    gap: 16px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+    transform: translateY(-110%);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+  }
+
+  .nav-links.mobile-open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .nav-item {
+    width: 100%;
+    text-align: center;
+  }
+
+  .nav-btn-login {
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .hero-content {
+    padding: 90px 16px 30px;
+  }
+
+  .glass-card {
+    padding: 30px 22px 26px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-title {
+    font-size: 24px;
+  }
+
+  .form-options-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

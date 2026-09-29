@@ -18,15 +18,11 @@ $p = [
 
 $userAccount = null;
 if ($id) {
-    $stmt = $pdo->prepare("SELECT * FROM personel WHERE id=?");
+    $stmt = $pdo->prepare("SELECT * FROM v_personel_lengkap WHERE id=?");
     $stmt->execute([$id]);
     $found = $stmt->fetch();
     if ($found) {
         $p = $found;
-        // Jika ID relasi belum ada di database, selesaikan otomatis
-        if (empty($p['pangkat_id']) || empty($p['korp_id']) || empty($p['satuan_id']) || empty($p['kotama_id'])) {
-            resolve_and_save_personel_relations($pdo, $p);
-        }
     }
 
     $stmtU = $pdo->prepare("SELECT * FROM users WHERE personel_id=?");
@@ -37,18 +33,32 @@ if ($id) {
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+    $pangkatId = (int)($_POST['pangkat_id'] ?? 0) ?: null;
+    $satuanId  = (int)($_POST['satuan_id'] ?? 0) ?: null;
+    $kotamaId  = (int)($_POST['kotama_id'] ?? 0) ?: null;
+
+    // Jika kotama_id belum diisi tapi satuan_id ada, ambil kotama_id dari master_satuan
+    if (!$kotamaId && $satuanId) {
+        $stK = $pdo->prepare("SELECT kotama_id FROM master_satuan WHERE id = ?");
+        $stK->execute([$satuanId]);
+        $kotamaId = $stK->fetchColumn() ?: null;
+    }
+
+    // Ambil golongan dari master_pangkat untuk kalkulasi proyeksi pensiun
+    $golongan = $_POST['golongan'] ?? 'Perwira';
+    if ($pangkatId) {
+        $stG = $pdo->prepare("SELECT golongan FROM master_pangkat WHERE id = ?");
+        $stG->execute([$pangkatId]);
+        $golongan = $stG->fetchColumn() ?: $golongan;
+    }
+
     $data = [
         'nrp'         => trim($_POST['nrp']),
         'nama'        => trim($_POST['nama']),
-        'golongan'    => $_POST['golongan'] ?? 'Perwira',
-        'pangkat_id'  => (int)($_POST['pangkat_id'] ?? 0) ?: null,
-        'pangkat'     => trim($_POST['pangkat'] ?? ''),
+        'pangkat_id'  => $pangkatId,
         'korp_id'     => (int)($_POST['korp_id'] ?? 0) ?: null,
-        'korp'        => trim($_POST['korp'] ?? ''),
-        'kotama_id'   => (int)($_POST['kotama_id'] ?? 0) ?: null,
-        'kotama'      => trim($_POST['kotama'] ?? ''),
-        'satuan_id'   => (int)($_POST['satuan_id'] ?? 0) ?: null,
-        'satuan'      => trim($_POST['satuan'] ?? ''),
+        'satuan_id'   => $satuanId,
+        'kotama_id'   => $kotamaId,
         'jabatan'     => trim($_POST['jabatan'] ?? ''),
         'tmt_jabatan' => $_POST['tmt_jabatan'] ?: null,
         'tmt_pangkat' => $_POST['tmt_pangkat'] ?: null,
@@ -61,11 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'no_hp'         => trim($_POST['no_hp'] ?? ''),
         'email'         => trim($_POST['email'] ?? ''),
         'status_dinas'  => $_POST['status_dinas'] ?? 'Aktif',
-        'tmt_pensiun_proyeksi' => hitung_proyeksi_pensiun($_POST['tanggal_lahir'] ?: null, $_POST['golongan'] ?? 'Perwira'),
+        'tmt_pensiun_proyeksi' => hitung_proyeksi_pensiun($_POST['tanggal_lahir'] ?: null, $golongan),
     ];
-
-    // Sinkronisasi otomatis nilai master ID dan nama teks relasi alami
-    resolve_and_save_personel_relations($pdo, $data);
 
     $statusAkun = $_POST['status_akun'] ?? 'approved';
     if (!in_array($statusAkun, ['approved', 'pending'], true)) {

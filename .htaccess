@@ -24,3 +24,10 @@ Options -Indexes
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
+
+# 5. Penanganan Halaman Kesalahan Kustom (Custom Error Handling)
+ErrorDocument 401 /edosir-tni/error.php?code=401
+ErrorDocument 403 /edosir-tni/error.php?code=403
+ErrorDocument 404 /edosir-tni/error.php?code=404
+ErrorDocument 500 /edosir-tni/error.php?code=500
+
