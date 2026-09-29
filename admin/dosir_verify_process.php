@@ -75,10 +75,8 @@ function process_single_dosir_verification(PDO $pdo, int $id, string $action, ar
         $signatureCode = "TTE-TRISULA-{$yearMonth}-{$id}-{$randToken}";
         $docHash = file_exists($rawMasterPath) ? hash_file('sha256', $rawMasterPath) : '';
 
-        // URL Verifikasi Publik untuk QR Code
-        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $verifyUrl = $scheme . '://' . $host . BASE_URL . '/verify.php?code=' . urlencode($signatureCode);
+        // URL Verifikasi Publik untuk QR Code & Barcode TTE (Prioritaskan Domain Hosting)
+        $verifyUrl = build_verify_url($signatureCode, $pdo);
 
         // Ambil Profil Lengkap Administrator Verifikator
         $stmtAdmin = $pdo->prepare("
@@ -144,6 +142,14 @@ function process_single_dosir_verification(PDO $pdo, int $id, string $action, ar
         $upd->execute([$catatan !== '' ? $catatan : null, $admin['id'], $id]);
 
         return ['success' => true, 'code' => null, 'file_name' => $file['file_name']];
+    } elseif ($action === 'restamp') {
+        $res = restamp_all_approved_tte($pdo, $id);
+        if ($res['updated'] > 0) {
+            log_activity($pdo, $admin['id'], 'RESTAMP_TTE', "Memperbarui stempel QR Code TTE berkas ID #$id ({$file['file_name']}) ke domain hosting");
+            return ['success' => true, 'code' => $file['signature_code'], 'file_name' => $file['file_name']];
+        } else {
+            return ['success' => false, 'error' => implode(' ', $res['errors']) ?: 'Gagal memperbarui barcode TTE berkas.'];
+        }
     }
 
     return ['success' => false, 'error' => 'Aksi verifikasi tidak valid'];
@@ -152,7 +158,7 @@ function process_single_dosir_verification(PDO $pdo, int $id, string $action, ar
 // =====================================================================
 // A. AKSI VERIFIKASI MASSAL (BULK VERIFICATION)
 // =====================================================================
-if ($action === 'bulk_approve' || $action === 'bulk_reject') {
+if ($action === 'bulk_approve' || $action === 'bulk_reject' || $action === 'bulk_restamp') {
     $ids = $_POST['ids'] ?? [];
     if (!is_array($ids) || empty($ids)) {
         set_flash('error', 'Pilih minimal satu berkas dosir untuk diproses secara massal.');
@@ -165,7 +171,14 @@ if ($action === 'bulk_approve' || $action === 'bulk_reject') {
         redirect($redirectUrl);
     }
 
-    $targetAction = ($action === 'bulk_approve') ? 'approved' : 'rejected';
+    if ($action === 'bulk_approve') {
+        $targetAction = 'approved';
+    } elseif ($action === 'bulk_reject') {
+        $targetAction = 'rejected';
+    } else {
+        $targetAction = 'restamp';
+    }
+
     $catatan = trim($_POST['catatan_verifikasi'] ?? '');
 
     $successCount = 0;
@@ -183,6 +196,9 @@ if ($action === 'bulk_approve' || $action === 'bulk_reject') {
     if ($targetAction === 'approved') {
         log_activity($pdo, $admin['id'], 'BULK_VERIFIKASI_DOSIR', "Verifikasi massal: $successCount berkas disetujui TTE (Gagal: $failCount)");
         set_flash('success', "Verifikasi Massal Berhasil! Sebanyak $successCount berkas dosir telah disetujui dan disahkan dengan Tanda Tangan Elektronik (TTE) resmi." . ($failCount > 0 ? " ($failCount berkas gagal)" : ''));
+    } elseif ($targetAction === 'restamp') {
+        log_activity($pdo, $admin['id'], 'BULK_RESTAMP_TTE', "Stempel ulang massal: $successCount berkas diperbarui barcode QR Code (Gagal: $failCount)");
+        set_flash('success', "Stempel Ulang Selesai! Sebanyak $successCount berkas dosir telah diperbarui barcode QR Codenya ke domain hosting." . ($failCount > 0 ? " ($failCount berkas gagal)" : ''));
     } else {
         log_activity($pdo, $admin['id'], 'BULK_REJECT_DOSIR', "Penolakan massal: $successCount berkas ditolak (Catatan: $catatan)");
         set_flash('warning', "Penolakan Massal Selesai. Sebanyak $successCount berkas dosir telah ditolak dengan catatan verifikasi." . ($failCount > 0 ? " ($failCount berkas gagal)" : ''));
@@ -195,7 +211,7 @@ if ($action === 'bulk_approve' || $action === 'bulk_reject') {
 // B. AKSI VERIFIKASI TUNGGAL (SINGLE ACTION)
 // =====================================================================
 $id = (int)($_POST['id'] ?? 0);
-if (!$id || !in_array($action, ['approved', 'rejected'], true)) {
+if (!$id || !in_array($action, ['approved', 'rejected', 'restamp'], true)) {
     redirect($redirectUrl);
 }
 
@@ -206,6 +222,8 @@ if ($res['success']) {
     if ($action === 'approved') {
         log_activity($pdo, $admin['id'], 'VERIFIKASI_DOSIR', "Dosir file #$id approved (TTE: {$res['code']})");
         set_flash('success', "Berkas '{$res['file_name']}' berhasil disetujui! Watermark telah dihilangkan dan digantikan Sertifikasi Tanda Tangan Elektronik (TTE: {$res['code']}).");
+    } elseif ($action === 'restamp') {
+        set_flash('success', "Barcode QR Code berkas {$res['file_name']} berhasil diperbarui dan distempel ulang ke domain hosting.");
     } else {
         log_activity($pdo, $admin['id'], 'VERIFIKASI_DOSIR', "Dosir file #$id rejected");
         set_flash('success', "Berkas '{$res['file_name']}' berhasil ditolak. Personel dapat melihat catatan verifikasi dan mengunggah perbaikan.");

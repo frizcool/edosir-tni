@@ -92,12 +92,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $sessionTimeout = max(5, (int)($_POST['session_timeout_minutes'] ?? 30));
             $seoDesc        = trim($_POST['seo_description'] ?? '');
             $seoKeywords    = trim($_POST['seo_keywords'] ?? '');
+            $appUrl         = trim($_POST['app_url'] ?? '');
+            $doRestamp      = !empty($_POST['restamp_now']);
 
             update_setting($pdo, 'app_name', $appName, 'general');
             update_setting($pdo, 'app_subtitle', $appSubtitle, 'general');
             update_setting($pdo, 'app_brand_title', $appBrandTitle ?: 'TRISULA', 'general');
             update_setting($pdo, 'app_brand_sub', $appBrandSub ?: 'TNI AD', 'general');
             update_setting($pdo, 'instansi', $instansi ?: 'TNI Angkatan Darat', 'general');
+            update_setting($pdo, 'app_url', $appUrl, 'general');
             update_setting($pdo, 'seo_description', $seoDesc, 'general');
             update_setting($pdo, 'seo_keywords', $seoKeywords, 'general');
             update_setting($pdo, 'batas_tahun_jabatan', (string)$batasJabatan, 'dosir');
@@ -109,8 +112,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             update_setting($pdo, 'session_timeout_minutes', (string)$sessionTimeout, 'security');
 
             if (!$error) {
-                log_activity($pdo, $admin['id'], 'UPDATE_SETTINGS', "Memperbarui pengaturan aplikasi & SEO (Judul: $appName)");
-                set_flash('success', 'Pengaturan aplikasi, metadata SEO, dan logo berhasil disimpan.');
+                if ($doRestamp) {
+                    require_once __DIR__ . '/../includes/watermark.php';
+                    $restampResult = restamp_all_approved_tte($pdo);
+                    if ($restampResult['success']) {
+                        log_activity($pdo, $admin['id'], 'RESTAMP_TTE_ALL', "Memperbarui stempel QR Code pada {$restampResult['updated']} berkas TTE disetujui ke domain hosting ($appUrl)");
+                        set_flash('success', "Pengaturan berhasil disimpan dan sebanyak {$restampResult['updated']} berkas TTE yang telah disetujui telah berhasil distempel ulang dengan barcode QR Code domain hosting baru!");
+                    } else {
+                        set_flash('warning', "Pengaturan tersimpan, namun proses stempel ulang mengalami kendala: " . implode(' ', array_slice($restampResult['errors'], 0, 2)));
+                    }
+                } else {
+                    log_activity($pdo, $admin['id'], 'UPDATE_SETTINGS', "Memperbarui pengaturan aplikasi, domain & SEO (Judul: $appName)");
+                    set_flash('success', 'Pengaturan aplikasi, domain hosting, metadata SEO, dan logo berhasil disimpan.');
+                }
                 redirect('/admin/settings.php');
             }
         }
@@ -142,6 +156,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             redirect('/admin/settings.php');
         }
     }
+
+    // 3. Stempel Ulang Seluruh Barcode QR Code Dokumen TTE
+    elseif ($action === 'restamp_all') {
+        require_once __DIR__ . '/../includes/watermark.php';
+        $restampResult = restamp_all_approved_tte($pdo);
+        if ($restampResult['success']) {
+            log_activity($pdo, $admin['id'], 'RESTAMP_TTE_ALL', "Memperbarui stempel QR Code pada {$restampResult['updated']} berkas TTE disetujui ke domain hosting");
+            set_flash('success', "Berhasil memperbarui stempel barcode QR Code pada {$restampResult['updated']} berkas TTE yang telah disetujui ke URL domain hosting.");
+        } else {
+            set_flash('error', "Gagal memperbarui stempel berkas: " . implode(' ', array_slice($restampResult['errors'], 0, 3)));
+        }
+        redirect('/admin/settings.php');
+    }
 }
 
 // Ambil nilai pengaturan terkini
@@ -150,6 +177,9 @@ $currAppSubtitle    = get_setting($pdo, 'app_subtitle', 'Tata Kelola Rekam Infor
 $currAppBrandTitle  = get_setting($pdo, 'app_brand_title', 'TRISULA');
 $currAppBrandSub    = get_setting($pdo, 'app_brand_sub', 'TNI AD');
 $currInstansi       = get_setting($pdo, 'instansi', 'TNI Angkatan Darat');
+$currAppUrl         = get_setting($pdo, 'app_url', '');
+$detectedPublicUrl  = app_public_url($pdo);
+$totalApprovedDosir = (int)$pdo->query("SELECT COUNT(*) FROM dosir_files WHERE status = 'approved'")->fetchColumn();
 $currSeoDesc        = get_setting($pdo, 'seo_description', 'Sistem Informasi Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip (TRISULA) Dosir Elektronik dan Autentikasi Tanda Tangan Elektronik (TTE) Prajurit & PNS TNI AD.');
 $currSeoKeywords    = get_setting($pdo, 'seo_keywords', 'trisula tni ad, dosir elektronik, e-dosir, tte tni ad, arsip digital prajurit, verifikasi berkas tni, infolahta, ditziad');
 $currBatasJabatan   = get_setting($pdo, 'batas_tahun_jabatan', '2');
@@ -303,6 +333,32 @@ include __DIR__ . '/../includes/header.php';
         </span>
       </div>
 
+      <div style="padding:14px;background:var(--panel-2);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:8px;margin-bottom:18px;">
+        <strong style="font-size:13px;display:block;margin-bottom:10px;color:var(--gold);">🌐 Domain Hosting & Integrasi Barcode QR Code TTE:</strong>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;">URL Domain Publik / Hosting (Base URL)</label>
+          <input type="text" name="app_url" value="<?= htmlspecialchars($currAppUrl) ?>" placeholder="Contoh: https://namadomain.com atau https://namadomain.com/edosir-tni">
+          <span style="font-size:11px;color:var(--text-dim);display:block;margin-top:4px;">
+            Alamat domain resmi tempat aplikasi dihosting. <strong>Seluruh barcode QR Code TTE dan tautan verifikasi online akan dikunci ke domain ini</strong> agar saat barcode di-scan via HP atau scanner online tidak mengarah ke localhost. Biarkan kosong jika ingin otomatis mendeteksi dari peramban/hosting.
+          </span>
+          <div style="font-size:11.5px;color:var(--gold);margin-top:6px;background:rgba(212,175,55,0.08);padding:6px 10px;border-radius:4px;border:1px dashed var(--border);">
+            📡 URL Publik Terdeteksi Otomatis Saat Ini: <code><?= htmlspecialchars($detectedPublicUrl) ?></code>
+          </div>
+        </div>
+
+        <?php if ($totalApprovedDosir > 0): ?>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
+            <div style="font-size:12px;color:var(--text);margin-bottom:8px;">
+              Terdapat <strong><?= $totalApprovedDosir ?></strong> berkas dosir berstatus disetujui (Approved). Jika sebelumnya berkas disahkan saat di localhost, centang kotak di bawah untuk mencetak ulang barcode dokumen PDF dengan domain hosting baru:
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ok);">
+              <input type="checkbox" name="restamp_now" value="1">
+              <span>🔄 Stempel ulang & perbarui seluruh barcode QR Code dokumen TTE saat disimpan</span>
+            </label>
+          </div>
+        <?php endif; ?>
+      </div>
+
       <div style="padding:14px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">
         <strong style="font-size:13px;display:block;margin-bottom:10px;color:var(--gold);">🌐 Optimasi SEO & Metadata Portal Publik:</strong>
         <div style="margin-bottom:12px;">
@@ -365,6 +421,27 @@ include __DIR__ . '/../includes/header.php';
 
         <button type="submit" class="btn btn-outline" style="width:100%;padding:9px;">
           🔒 Perbarui Kata Sandi
+        </button>
+      </form>
+    </div>
+
+    <!-- Kartu Tindakan Cepat Stempel Ulang Barcode TTE -->
+    <div class="card" style="border-left:4px solid var(--gold);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <span style="font-size:20px;color:var(--gold);">📱</span>
+        <div>
+          <h4 style="margin:0;font-size:14px;">Pemutakhiran Barcode TTE</h4>
+          <div style="font-size:12px;color:var(--text-dim);">Sinkronisasi barcode seluruh berkas PDF yang disetujui</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text);margin:0 0 12px;line-height:1.5;">
+        Fitur ini berguna saat migrasi dari localhost ke hosting. Seluruh berkas PDF (<strong><?= $totalApprovedDosir ?></strong> berkas) akan dicetak ulang dengan QR Code yang mengarah ke domain hosting resmi.
+      </p>
+      <form method="post" onsubmit="return confirm('Apakah Anda yakin ingin memperbarui dan mencetak ulang seluruh barcode QR Code dokumen TTE yang telah disetujui?');">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="restamp_all">
+        <button type="submit" class="btn btn-outline" style="width:100%;font-size:12px;padding:8px 12px;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span>🔄 Stempel Ulang Semua Barcode Sekarang</span>
         </button>
       </form>
     </div>

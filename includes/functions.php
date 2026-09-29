@@ -119,6 +119,65 @@ function app_logo_url($db = null) {
 }
 
 /**
+ * Dapatkan URL dasar publik aplikasi (Base URL Domain Penuh)
+ * Prioritas:
+ * 1. Database Setting: `app_url` (contoh: https://namadomain.com atau https://namadomain.com/edosir-tni)
+ * 2. Environment Variable: `APP_URL`
+ * 3. Deteksi otomatis via HTTP headers (lengkap dengan reverse proxy X-Forwarded-Proto & Host)
+ */
+function app_public_url($pdo = null): string {
+    global $pdo;
+    $db = $pdo;
+    
+    // 1. Cek setting database 'app_url' (Prioritas Utama untuk menjamin QR code TTE tidak ke localhost)
+    if ($db) {
+        try {
+            $dbUrl = trim((string)get_setting($db, 'app_url', ''));
+            if ($dbUrl !== '') {
+                return rtrim($dbUrl, '/');
+            }
+        } catch (\Throwable $e) {}
+    }
+    
+    // 2. Cek Environment Variable APP_URL
+    $envUrl = getenv('APP_URL');
+    if ($envUrl !== false && trim($envUrl) !== '') {
+        return rtrim(trim($envUrl), '/');
+    }
+
+    // 3. Deteksi otomatis dari Request HTTP
+    $protocol = 'http';
+    if (
+        (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] == 1)) ||
+        (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
+        (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) === 'on') ||
+        (isset($_SERVER['SERVER_PORT']) && $_SERVER['SERVER_PORT'] == '443')
+    ) {
+        $protocol = 'https';
+    }
+
+    $host = 'localhost';
+    if (!empty($_SERVER['HTTP_X_FORWARDED_HOST'])) {
+        $hosts = explode(',', $_SERVER['HTTP_X_FORWARDED_HOST']);
+        $host = trim($hosts[0]);
+    } elseif (!empty($_SERVER['HTTP_HOST'])) {
+        $host = $_SERVER['HTTP_HOST'];
+    } elseif (!empty($_SERVER['SERVER_NAME'])) {
+        $host = $_SERVER['SERVER_NAME'];
+    }
+
+    $basePath = defined('BASE_URL') ? BASE_URL : '';
+    return rtrim($protocol . '://' . $host . $basePath, '/');
+}
+
+/**
+ * Bangun URL verifikasi publik untuk QR Code & Barcode TTE
+ */
+function build_verify_url(string $signatureCode, $pdo = null): string {
+    return app_public_url($pdo) . '/verify.php?code=' . urlencode($signatureCode);
+}
+
+/**
  * Render elemen meta tag SEO, Open Graph, Twitter Cards, Favicon & Schema.org JSON-LD
  * Mengambil data dinamis terintegrasi dari tabel database `settings`
  *
@@ -171,17 +230,16 @@ function render_seo_tags($pdo = null, array $options = []) {
     }
 
     // 3. Tentukan URL Penuh & Kanonikal
-    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https://' : 'http://';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $appBaseUrl = app_public_url($db);
     $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
-    $currentFullUrl = $protocol . $host . $reqUri;
+    $currentFullUrl = rtrim($appBaseUrl, '/') . $reqUri;
     $canonicalUrl = !empty($options['canonical']) ? $options['canonical'] : strtok($currentFullUrl, '?');
 
     // 4. Logo / Open Graph Image
     $appLogo = app_logo_url($db);
     $defaultOgImage = BASE_URL . '/assets/img/logo_1789696457.png';
     $ogImgRel = !empty($options['image']) ? $options['image'] : ($appLogo ?: $defaultOgImage);
-    $ogImgFull = (strpos($ogImgRel, 'http') === 0) ? $ogImgRel : ($protocol . $host . $ogImgRel);
+    $ogImgFull = (strpos($ogImgRel, 'http') === 0) ? $ogImgRel : ($appBaseUrl . (strpos($ogImgRel, '/') === 0 ? '' : '/') . $ogImgRel);
 
     $isPublic = $options['is_public'] ?? false;
     $ogType   = $options['type'] ?? 'website';

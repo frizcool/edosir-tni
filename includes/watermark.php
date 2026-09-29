@@ -256,7 +256,7 @@ function apply_digital_signature_pdf($rawMasterPath, $outputPath, array $signDat
 function apply_watermark_pdf($absolutePath, $labelBawah = '', $watermarkText = 'TERVERIFIKASI') {
     $signData = [
         'code'          => 'TTE-' . date('Ymd-His'),
-        'verify_url'    => BASE_URL . '/verify.php?code=LEGACY',
+        'verify_url'    => function_exists('build_verify_url') ? build_verify_url('LEGACY') : (BASE_URL . '/verify.php?code=LEGACY'),
         'nama_admin'    => 'Administrator Satuan',
         'pangkat_admin' => 'Admin Pers',
         'nrp_admin'     => '99999999',
@@ -264,4 +264,111 @@ function apply_watermark_pdf($absolutePath, $labelBawah = '', $watermarkText = '
         'date'          => date('d-m-Y H:i:s'),
     ];
     return apply_digital_signature_pdf($absolutePath, $absolutePath, $signData);
+}
+
+/**
+ * Stempel Ulang / Perbarui Barcode QR Code pada berkas TTE yang sudah disetujui (Approved)
+ * Berguna saat migrasi hosting atau perubahan domain agar QR Code tidak mengarah ke localhost.
+ *
+ * @param PDO $pdo
+ * @param int|null $specificFileId Jika null, memproses seluruh berkas approved
+ * @return array ['success' => bool, 'total' => int, 'updated' => int, 'skipped' => int, 'errors' => array]
+ */
+function restamp_all_approved_tte($pdo, $specificFileId = null): array {
+    $sql = "SELECT f.*, u.id as admin_uid, p.nama as admin_nama, mp.singkatan as admin_pangkat, p.nrp as admin_nrp, ms.nama as admin_satuan
+            FROM dosir_files f
+            LEFT JOIN users u ON u.id = f.verified_by
+            LEFT JOIN personel p ON p.id = u.personel_id
+            LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
+            LEFT JOIN master_satuan ms ON ms.id = p.satuan_id
+            WHERE f.status = 'approved'";
+    $params = [];
+    if ($specificFileId !== null) {
+        $sql .= " AND f.id = ?";
+        $params[] = (int)$specificFileId;
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $total   = count($files);
+    $updated = 0;
+    $skipped = 0;
+    $errors  = [];
+
+    $instansi = get_setting($pdo, 'instansi', 'TNI Angkatan Darat');
+
+    foreach ($files as $row) {
+        $id = (int)$row['id'];
+        $rawRel = $row['raw_file_path'] ?: '';
+        $rawMasterPath = ($rawRel !== '') ? (UPLOAD_DIR . '/' . $rawRel) : '';
+        $outputPath    = UPLOAD_DIR . '/' . $row['file_path'];
+
+        // Jika raw master tidak ada, coba gunakan file_path
+        if (!file_exists($rawMasterPath)) {
+            if (file_exists($outputPath)) {
+                $rawMasterPath = $outputPath;
+            } else {
+                $skipped++;
+                $errors[] = "Berkas ID #{$id} ({$row['file_name']}): File fisik tidak ditemukan.";
+                continue;
+            }
+        }
+
+        // Pertahankan signature code yang sudah ada, atau buat baru jika kosong
+        $signatureCode = $row['signature_code'];
+        if (empty($signatureCode)) {
+            $yearMonth = date('Ym', !empty($row['verified_at']) ? strtotime($row['verified_at']) : time());
+            $randToken = strtoupper(substr(md5(uniqid((string)$id, true)), 0, 6));
+            $signatureCode = "TTE-TRISULA-{$yearMonth}-{$id}-{$randToken}";
+        }
+
+        $docHash = file_exists($rawMasterPath) ? hash_file('sha256', $rawMasterPath) : '';
+        $verifyUrl = build_verify_url($signatureCode, $pdo);
+
+        $namaAdmin    = !empty($row['admin_nama']) ? $row['admin_nama'] : 'Administrator Sistem';
+        $pangkatAdmin = !empty($row['admin_pangkat']) ? $row['admin_pangkat'] : 'Admin Pers';
+        $nrpAdmin     = !empty($row['admin_nrp']) ? $row['admin_nrp'] : '-';
+        $satuanAdmin  = !empty($row['admin_satuan']) ? $row['admin_satuan'] : $instansi;
+        $signDate     = !empty($row['verified_at']) ? date('d-m-Y H:i:s', strtotime($row['verified_at'])) : date('d-m-Y H:i:s');
+
+        $signData = [
+            'code'          => $signatureCode,
+            'hash'          => $docHash,
+            'verify_url'    => $verifyUrl,
+            'nama_admin'    => $namaAdmin,
+            'pangkat_admin' => $pangkatAdmin,
+            'nrp_admin'     => $nrpAdmin,
+            'satuan_admin'  => $satuanAdmin,
+            'date'          => $signDate,
+        ];
+
+        $ok = apply_digital_signature_pdf($rawMasterPath, $outputPath, $signData);
+        if ($ok && file_exists($outputPath)) {
+            @touch($outputPath);
+            $signedHash = hash_file('sha256', $outputPath);
+
+            $upd = $pdo->prepare("
+                UPDATE dosir_files 
+                SET signature_code = ?,
+                    signature_hash = ?,
+                    raw_hash = ?
+                WHERE id = ?
+            ");
+            $upd->execute([$signatureCode, $signedHash, $docHash, $id]);
+            $updated++;
+        } else {
+            $skipped++;
+            $errors[] = "Gagal memproses TTE PDF untuk berkas ID #{$id} ({$row['file_name']}).";
+        }
+    }
+
+    return [
+        'success' => ($updated > 0 || $total === 0),
+        'total'   => $total,
+        'updated' => $updated,
+        'skipped' => $skipped,
+        'errors'  => $errors,
+    ];
 }

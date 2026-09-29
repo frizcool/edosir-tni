@@ -207,6 +207,9 @@ include __DIR__ . '/../includes/header.php';
       <button type="button" class="btn btn-danger" style="padding:7px 16px;font-size:12.5px;" onclick="openBulkRejectModal()">
         ✕ Tolak Massal...
       </button>
+      <button type="button" class="btn btn-outline" style="padding:7px 14px;font-size:12.5px;color:var(--gold);border-color:var(--gold);" onclick="confirmBulkRestamp()" title="Perbarui Barcode QR Code Berkas Terpilih ke Domain Hosting">
+        🔄 Perbarui QR Massal
+      </button>
       <button type="button" class="btn btn-outline" style="padding:7px 12px;font-size:12.5px;" onclick="clearSelection()">
         Batal Pilih
       </button>
@@ -316,6 +319,13 @@ include __DIR__ . '/../includes/header.php';
                   <?php endif; ?>
                   <?php if ($row['verifikator_username']): ?>
                     <div style="font-size:10px;color:var(--text-dim);">Oleh: <?= htmlspecialchars($row['verifikator_nama'] ?: $row['verifikator_username']) ?></div>
+                  <?php endif; ?>
+                  <?php if ($row['status'] === 'approved'): ?>
+                    <div style="margin-top:4px;">
+                      <button type="button" class="btn btn-outline" style="padding:2px 7px;font-size:10px;" onclick="singleRestamp(<?= $row['id'] ?>)" title="Stempel ulang barcode QR Code ke domain hosting">
+                        🔄 Perbarui QR
+                      </button>
+                    </div>
                   <?php endif; ?>
                 </div>
               <?php endif; ?>
@@ -486,6 +496,27 @@ function singleReject(id) {
   document.getElementById('singleAction').value = 'rejected';
   document.getElementById('singleCatatan').value = note.trim();
   document.getElementById('singleActionForm').submit();
+}
+
+function singleRestamp(id) {
+  if (!confirm('Perbarui barcode QR Code dokumen ini agar mengarah ke domain hosting?')) return;
+  document.getElementById('singleId').value = id;
+  document.getElementById('singleAction').value = 'restamp';
+  document.getElementById('singleCatatan').value = '';
+  document.getElementById('singleActionForm').submit();
+}
+
+function confirmBulkRestamp() {
+  const checked = document.querySelectorAll('.row-select-chk:checked');
+  if (checked.length === 0) {
+    alert('Pilih minimal satu berkas dosir terlebih dahulu.');
+    return;
+  }
+  if (!confirm('Perbarui dan stempel ulang barcode QR Code pada ' + checked.length + ' berkas terpilih agar mengarah ke domain hosting?')) {
+    return;
+  }
+  document.getElementById('bulkActionInput').value = 'bulk_restamp';
+  document.getElementById('bulkForm').submit();
 }
 </script>
 
