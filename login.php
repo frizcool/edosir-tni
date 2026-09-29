@@ -31,8 +31,7 @@ $jsVersion = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtime(__D
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>Masuk | <?= htmlspecialchars($appName) ?></title>
-  <link rel="icon" type="image/png" href="<?= $appLogo ?: (BASE_URL . '/assets/img/logo_1789696457.png') ?>">
+  <?= render_seo_tags($pdo, ['title' => 'Masuk Portal', 'is_public' => true, 'type' => 'website']) ?>
   
   <!-- Modern Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

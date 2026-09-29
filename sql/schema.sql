@@ -355,6 +355,8 @@ INSERT INTO settings (setting_key, setting_value, setting_group) VALUES
 ('app_brand_title', 'TRISULA', 'general'),
 ('app_brand_sub', 'TNI AD', 'general'),
 ('instansi', 'TNI Angkatan Darat', 'general'),
+('seo_description', 'Sistem Informasi Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip (TRISULA) Dosir Elektronik dan Autentikasi Tanda Tangan Elektronik (TTE) Prajurit & PNS TNI AD.', 'general'),
+('seo_keywords', 'trisula tni ad, dosir elektronik, e-dosir, tte tni ad, arsip digital prajurit, verifikasi berkas tni, infolahta, ditziad', 'general'),
 ('watermark_text', 'TRISULA TERVERIFIKASI', 'dosir'),
 ('batas_tahun_jabatan', '2', 'dosir'),
 ('pejabat_nama', 'HENDRA PRATAMA, S.I.P.', 'laporan'),

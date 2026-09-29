@@ -7,7 +7,10 @@ $pageTitle = $pageTitle ?? APP_NAME;
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= htmlspecialchars($pageTitle) ?> | <?= APP_NAME ?></title>
+<?= render_seo_tags($pdo, [
+    'title'     => $pageTitle,
+    'is_public' => empty($u)
+]) ?>
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= filemtime(APP_ROOT . '/assets/css/style.css') ?>">
 </head>
 <body>

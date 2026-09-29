@@ -118,6 +118,141 @@ function app_logo_url($db = null) {
     return null;
 }
 
+/**
+ * Render elemen meta tag SEO, Open Graph, Twitter Cards, Favicon & Schema.org JSON-LD
+ * Mengambil data dinamis terintegrasi dari tabel database `settings`
+ *
+ * @param PDO|null $pdo
+ * @param array $options [
+ *     'title'        => string,  // Judul spesifik halaman
+ *     'description'  => string,  // Deskripsi khusus (opsional)
+ *     'keywords'     => string,  // Kata kunci khusus (opsional)
+ *     'is_public'    => bool,    // True: index,follow | False: noindex,nofollow (admin/personel)
+ *     'canonical'    => string,  // URL kanonikal (opsional)
+ *     'type'         => string,  // Tipe OpenGraph ('website', 'article', dll)
+ *     'image'        => string,  // URL gambar khusus OpenGraph (opsional)
+ *     'schema_type'  => string   // 'WebApplication' / 'GovernmentOrganization'
+ * ]
+ * @return string HTML meta tags
+ */
+function render_seo_tags($pdo = null, array $options = []) {
+    global $pdo;
+    $db = $pdo;
+    
+    // 1. Ambil data identitas dan pengaturan SEO dari basis data
+    $appName      = $db ? get_setting($db, 'app_name', defined('APP_NAME') ? APP_NAME : 'TRISULA TNI AD') : 'TRISULA TNI AD';
+    $appSubtitle  = $db ? get_setting($db, 'app_subtitle', 'Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip') : 'Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip';
+    $appBrandTitle= $db ? get_setting($db, 'app_brand_title', 'TRISULA') : 'TRISULA';
+    $appBrandSub  = $db ? get_setting($db, 'app_brand_sub', 'TNI AD') : 'TNI AD';
+    $instansi     = $db ? get_setting($db, 'instansi', 'TNI Angkatan Darat') : 'TNI Angkatan Darat';
+    $dbSeoDesc    = $db ? get_setting($db, 'seo_description', '') : '';
+    $dbKeywords   = $db ? get_setting($db, 'seo_keywords', '') : '';
+
+    // 2. Tentukan Judul, Deskripsi & Kata Kunci
+    $pageTitlePart = trim($options['title'] ?? '');
+    if ($pageTitlePart !== '' && strcasecmp($pageTitlePart, $appName) !== 0) {
+        $finalTitle = $pageTitlePart . ' | ' . $appName;
+    } else {
+        $finalTitle = $appName . ' - ' . $appSubtitle;
+    }
+
+    $finalDesc = trim($options['description'] ?? '');
+    if ($finalDesc === '') {
+        $finalDesc = $dbSeoDesc ?: ($appSubtitle . ' - Layanan digitalisasi 33 berkas warkat induk dosir dan verifikasi Tanda Tangan Elektronik (TTE) ' . $instansi . '.');
+    }
+    // Batasi deskripsi ideal SEO (155-165 karakter)
+    if (mb_strlen($finalDesc) > 170) {
+        $finalDesc = mb_substr($finalDesc, 0, 167) . '...';
+    }
+
+    $finalKeywords = trim($options['keywords'] ?? '');
+    if ($finalKeywords === '') {
+        $finalKeywords = $dbKeywords ?: "trisula, tni ad, dosir elektronik, e-dosir, tte tni ad, arsip digital, warkat induk, verifikasi berkas, {$instansi}";
+    }
+
+    // 3. Tentukan URL Penuh & Kanonikal
+    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') ? 'https://' : 'http://';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $reqUri = $_SERVER['REQUEST_URI'] ?? '/';
+    $currentFullUrl = $protocol . $host . $reqUri;
+    $canonicalUrl = !empty($options['canonical']) ? $options['canonical'] : strtok($currentFullUrl, '?');
+
+    // 4. Logo / Open Graph Image
+    $appLogo = app_logo_url($db);
+    $defaultOgImage = BASE_URL . '/assets/img/logo_1789696457.png';
+    $ogImgRel = !empty($options['image']) ? $options['image'] : ($appLogo ?: $defaultOgImage);
+    $ogImgFull = (strpos($ogImgRel, 'http') === 0) ? $ogImgRel : ($protocol . $host . $ogImgRel);
+
+    $isPublic = $options['is_public'] ?? false;
+    $ogType   = $options['type'] ?? 'website';
+
+    // 5. Output HTML Meta Tags
+    $html = [];
+    $html[] = '<!-- Pengaturan Meta Tag SEO Terintegrasi (Data Setting Database) -->';
+    $html[] = '<title>' . htmlspecialchars($finalTitle, ENT_QUOTES, 'UTF-8') . '</title>';
+    $html[] = '<meta name="description" content="' . htmlspecialchars($finalDesc, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta name="keywords" content="' . htmlspecialchars($finalKeywords, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta name="author" content="' . htmlspecialchars($instansi, ENT_QUOTES, 'UTF-8') . '">';
+    
+    // Robot Indexing: Halaman publik diindeks, halaman internal/admin diproteksi dari mesin pencari
+    if ($isPublic) {
+        $html[] = '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">';
+    } else {
+        $html[] = '<meta name="robots" content="noindex, nofollow, noarchive">';
+    }
+
+    $html[] = '<link rel="canonical" href="' . htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') . '">';
+
+    // Favicon & Web App Icons
+    $faviconUrl = $appLogo ?: (BASE_URL . '/assets/img/logo_1789696457.png');
+    $html[] = '<link rel="icon" type="image/png" href="' . htmlspecialchars($faviconUrl, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<link rel="apple-touch-icon" href="' . htmlspecialchars($faviconUrl, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta name="theme-color" content="#1a2517">';
+    $html[] = '<meta name="application-name" content="' . htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') . '">';
+
+    // Open Graph / Facebook / WhatsApp / Telegram
+    $html[] = '<!-- Open Graph / Rich Snippet Meta -->';
+    $html[] = '<meta property="og:site_name" content="' . htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta property="og:title" content="' . htmlspecialchars($finalTitle, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta property="og:description" content="' . htmlspecialchars($finalDesc, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta property="og:type" content="' . htmlspecialchars($ogType, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta property="og:url" content="' . htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta property="og:image" content="' . htmlspecialchars($ogImgFull, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta property="og:locale" content="id_ID">';
+
+    // Twitter Card
+    $html[] = '<!-- Twitter Cards -->';
+    $html[] = '<meta name="twitter:card" content="summary_large_image">';
+    $html[] = '<meta name="twitter:title" content="' . htmlspecialchars($finalTitle, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta name="twitter:description" content="' . htmlspecialchars($finalDesc, ENT_QUOTES, 'UTF-8') . '">';
+    $html[] = '<meta name="twitter:image" content="' . htmlspecialchars($ogImgFull, ENT_QUOTES, 'UTF-8') . '">';
+
+    // Schema.org Structured Data (JSON-LD) untuk Halaman Publik
+    if ($isPublic) {
+        $schemaType = $options['schema_type'] ?? 'WebApplication';
+        $jsonLd = [
+            '@context'      => 'https://schema.org',
+            '@type'         => $schemaType,
+            'name'          => $appName,
+            'alternateName' => $appBrandTitle . ' ' . $appBrandSub,
+            'description'   => $finalDesc,
+            'url'           => $canonicalUrl,
+            'applicationCategory' => 'BusinessApplication',
+            'operatingSystem'     => 'All',
+            'provider'      => [
+                '@type' => 'GovernmentOrganization',
+                'name'  => $instansi
+            ]
+        ];
+        if ($ogImgFull) {
+            $jsonLd['image'] = $ogImgFull;
+        }
+        $html[] = '<script type="application/ld+json">' . json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
+    }
+
+    return implode("\n  ", $html);
+}
+
 /** CSRF Token Generator */
 function csrf_token() {
     if (empty($_SESSION['csrf_token'])) {

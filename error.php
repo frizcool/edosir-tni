@@ -144,6 +144,7 @@ $jsVer  = file_exists(__DIR__ . '/assets/js/error-modern.js') ? filemtime(__DIR_
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive">
   <title><?= $code ?> &bull; <?= htmlspecialchars($displayTitle) ?> | <?= htmlspecialchars($appName) ?></title>
   <link rel="icon" type="image/png" href="<?= $appLogo ?: ($baseUrl . '/assets/img/logo_1789696457.png') ?>">
   

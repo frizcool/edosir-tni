@@ -98,7 +98,12 @@ $pageTitle = 'Verifikasi Keabsahan Dokumen TTE';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?= htmlspecialchars($pageTitle) ?> | <?= APP_NAME ?></title>
+<?= render_seo_tags($pdo, [
+    'title'       => 'Verifikasi Keabsahan TTE & QR Code',
+    'description' => 'Portal publik verifikasi dan uji integritas kriptografis berkas dosir prajurit ber-Tanda Tangan Elektronik (TTE) TNI AD via pemindaian QR Code.',
+    'is_public'   => true,
+    'type'        => 'website'
+]) ?>
 <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= filemtime(APP_ROOT . '/assets/css/style.css') ?>">
 <style>
 .verify-container {

@@ -90,12 +90,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             $pejabatNrp     = trim($_POST['pejabat_nrp'] ?? '');
             $pejabatJabatan = trim($_POST['pejabat_jabatan'] ?? '');
             $sessionTimeout = max(5, (int)($_POST['session_timeout_minutes'] ?? 30));
+            $seoDesc        = trim($_POST['seo_description'] ?? '');
+            $seoKeywords    = trim($_POST['seo_keywords'] ?? '');
 
             update_setting($pdo, 'app_name', $appName, 'general');
             update_setting($pdo, 'app_subtitle', $appSubtitle, 'general');
             update_setting($pdo, 'app_brand_title', $appBrandTitle ?: 'TRISULA', 'general');
             update_setting($pdo, 'app_brand_sub', $appBrandSub ?: 'TNI AD', 'general');
             update_setting($pdo, 'instansi', $instansi ?: 'TNI Angkatan Darat', 'general');
+            update_setting($pdo, 'seo_description', $seoDesc, 'general');
+            update_setting($pdo, 'seo_keywords', $seoKeywords, 'general');
             update_setting($pdo, 'batas_tahun_jabatan', (string)$batasJabatan, 'dosir');
             update_setting($pdo, 'watermark_text', $watermarkText ?: 'BELUM TERVERIFIKASI', 'dosir');
             update_setting($pdo, 'pejabat_nama', $pejabatNama, 'laporan');
@@ -105,8 +109,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             update_setting($pdo, 'session_timeout_minutes', (string)$sessionTimeout, 'security');
 
             if (!$error) {
-                log_activity($pdo, $admin['id'], 'UPDATE_SETTINGS', "Memperbarui pengaturan aplikasi (Judul: $appName)");
-                set_flash('success', 'Pengaturan aplikasi dan logo berhasil disimpan dan langsung diterapkan.');
+                log_activity($pdo, $admin['id'], 'UPDATE_SETTINGS', "Memperbarui pengaturan aplikasi & SEO (Judul: $appName)");
+                set_flash('success', 'Pengaturan aplikasi, metadata SEO, dan logo berhasil disimpan.');
                 redirect('/admin/settings.php');
             }
         }
@@ -146,6 +150,8 @@ $currAppSubtitle    = get_setting($pdo, 'app_subtitle', 'Tata Kelola Rekam Infor
 $currAppBrandTitle  = get_setting($pdo, 'app_brand_title', 'TRISULA');
 $currAppBrandSub    = get_setting($pdo, 'app_brand_sub', 'TNI AD');
 $currInstansi       = get_setting($pdo, 'instansi', 'TNI Angkatan Darat');
+$currSeoDesc        = get_setting($pdo, 'seo_description', 'Sistem Informasi Tata Kelola Rekam Informasi, Sistematika, & Unduhan Lengkap Arsip (TRISULA) Dosir Elektronik dan Autentikasi Tanda Tangan Elektronik (TTE) Prajurit & PNS TNI AD.');
+$currSeoKeywords    = get_setting($pdo, 'seo_keywords', 'trisula tni ad, dosir elektronik, e-dosir, tte tni ad, arsip digital prajurit, verifikasi berkas tni, infolahta, ditziad');
 $currBatasJabatan   = get_setting($pdo, 'batas_tahun_jabatan', '2');
 $currWatermarkText  = get_setting($pdo, 'watermark_text', 'BELUM TERVERIFIKASI');
 $currPejabatNama    = get_setting($pdo, 'pejabat_nama', 'HENDRA PRATAMA, S.I.P.');
@@ -295,6 +301,20 @@ include __DIR__ . '/../includes/header.php';
         <span style="font-size:11px;color:var(--text-dim);display:block;margin-top:4px;">
           Dicantumkan secara otomatis pada kolom tanda tangan lembar cetak laporan kedinasan.
         </span>
+      </div>
+
+      <div style="padding:14px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">
+        <strong style="font-size:13px;display:block;margin-bottom:10px;color:var(--gold);">🌐 Optimasi SEO & Metadata Portal Publik:</strong>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;">Deskripsi Meta (SEO Description)</label>
+          <textarea name="seo_description" rows="3" style="font-size:12.5px;line-height:1.5;" placeholder="Deskripsi ringkas portal untuk mesin pencari (Google, Bing) dan pratinjau media sosial (OpenGraph/Twitter)"><?= htmlspecialchars($currSeoDesc) ?></textarea>
+          <span style="font-size:11px;color:var(--text-dim);">Ditampilkan pada hasil pencarian search engine dan kartu pratinjau tautan (panjang rekomendasi 120-160 karakter).</span>
+        </div>
+        <div>
+          <label style="font-size:12px;">Kata Kunci Pencarian (SEO Keywords)</label>
+          <input type="text" name="seo_keywords" value="<?= htmlspecialchars($currSeoKeywords) ?>" placeholder="e-dosir, tni ad, arsip digital, verifikasi tte">
+          <span style="font-size:11px;color:var(--text-dim);">Pisahkan setiap kata kunci atau frasa dengan tanda koma (,).</span>
+        </div>
       </div>
 
       <div style="padding:14px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">
