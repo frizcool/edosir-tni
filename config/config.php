@@ -7,6 +7,27 @@ date_default_timezone_set('Asia/Jakarta');
 define('APP_ROOT', dirname(__DIR__));
 
 // =====================================================================
+// =====================================================================
+// POLIFILL KOMPATIBILITAS VERSI PHP (< PHP 8.0 / HOSTING PHP 7.4)
+// =====================================================================
+if (!function_exists('str_starts_with')) {
+    function str_starts_with(string $haystack, string $needle): bool {
+        return (string)$needle !== '' && strncmp($haystack, $needle, strlen($needle)) === 0;
+    }
+}
+if (!function_exists('str_ends_with')) {
+    function str_ends_with(string $haystack, string $needle): bool {
+        $len = strlen($needle);
+        return $len === 0 || (strlen($haystack) >= $len && substr_compare($haystack, $needle, -$len, $len) === 0);
+    }
+}
+if (!function_exists('str_contains')) {
+    function str_contains(string $haystack, string $needle): bool {
+        return (string)$needle === '' || strpos($haystack, $needle) !== false;
+    }
+}
+
+// =====================================================================
 // PEMUAT VARIABEL LINGKUNGAN (.env LOADER MANDIRI)
 // =====================================================================
 if (!function_exists('load_environment_file')) {
@@ -21,20 +42,22 @@ if (!function_exists('load_environment_file')) {
         foreach ($lines as $line) {
             $line = trim($line);
             // Abaikan baris kosong atau komentar
-            if ($line === '' || str_starts_with($line, '#') || str_starts_with($line, ';')) {
+            if ($line === '' || $line[0] === '#' || $line[0] === ';') {
                 continue;
             }
-            if (str_contains($line, '=')) {
+            if (strpos($line, '=') !== false) {
                 list($envKey, $envVal) = explode('=', $line, 2);
                 $envKey = trim($envKey);
                 $envVal = trim($envVal);
 
                 // Hilangkan pembungkus tanda petik jika ada
-                if (
-                    (str_starts_with($envVal, '"') && str_ends_with($envVal, '"')) ||
-                    (str_starts_with($envVal, "'") && str_ends_with($envVal, "'"))
-                ) {
-                    $envVal = substr($envVal, 1, -1);
+                $valLen = strlen($envVal);
+                if ($valLen >= 2) {
+                    $firstChar = $envVal[0];
+                    $lastChar  = $envVal[$valLen - 1];
+                    if (($firstChar === '"' && $lastChar === '"') || ($firstChar === "'" && $lastChar === "'")) {
+                        $envVal = substr($envVal, 1, -1);
+                    }
                 }
 
                 // Daftarkan ke getenv(), $_ENV, dan $_SERVER jika belum diset dari level web server
