@@ -365,9 +365,14 @@ include __DIR__ . '/../includes/header.php';
       <?php endif; ?>
     </div>
 
-    <div style="margin-top:24px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
+    <div style="margin-top:24px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;align-items:center;flex-wrap:wrap;">
       <button class="btn" type="submit" style="padding:0 24px;">💾 Simpan Data Personel</button>
       <a href="<?= BASE_URL ?>/admin/personel_list.php" class="btn btn-outline">Batal</a>
+      <?php if ($id): ?>
+        <button type="button" class="btn btn-outline btn-danger" style="margin-left:auto;" onclick="openDeleteModalForm()">
+          🗑️ Hapus Personel Ini
+        </button>
+      <?php endif; ?>
     </div>
   </form>
 </div>
@@ -484,4 +489,73 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<?php if ($id): ?>
+<!-- Modal Konfirmasi Hapus Personel Kaskade -->
+<div class="modal-backdrop" id="modalDeletePersonelForm">
+  <div class="modal-dialog" style="max-width:520px;">
+    <div class="modal-header" style="border-bottom:1px solid rgba(220,53,69,0.3);background:rgba(220,53,69,0.08);">
+      <h3 class="modal-title" style="color:var(--danger);display:flex;align-items:center;gap:8px;">
+        ⚠️ Konfirmasi Hapus Personel
+      </h3>
+      <button type="button" class="modal-close" onclick="closeDeleteModalForm()">&times;</button>
+    </div>
+    <form method="post" action="<?= BASE_URL ?>/admin/personel_delete.php">
+      <?= csrf_field() ?>
+      <input type="hidden" name="id" value="<?= $id ?>">
+      <input type="hidden" name="redirect_to" value="/admin/personel_list.php">
+      <div class="modal-body">
+        <div style="background:rgba(220,53,69,0.1);border-left:4px solid var(--danger);padding:12px 16px;border-radius:4px;margin-bottom:16px;">
+          <strong style="color:var(--danger);display:block;margin-bottom:4px;">TINDAKAN INI BERSIFAT PERMANEN & TIDAK DAPAT DIBATALKAN!</strong>
+          <span style="font-size:13px;color:var(--text-dim);">
+            Menghapus personel ini akan menghapus <strong>seluruh data terkait secara otomatis</strong> dari sistem pangkalan data dan server penyimpanan fisik.
+          </span>
+        </div>
+
+        <div style="background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
+          <div style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Personel yang akan dihapus:</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px;"><?= htmlspecialchars($p['nama']) ?></div>
+          <div style="font-size:13px;font-family:monospace;color:var(--gold);">NRP: <?= htmlspecialchars($p['nrp']) ?> &middot; <?= htmlspecialchars($p['pangkat'] ?? '-') ?></div>
+        </div>
+
+        <div style="font-size:13px;color:var(--text-dim);line-height:1.6;">
+          <strong>Data yang akan ikut terhapus tuntas:</strong>
+          <ul style="margin:8px 0 0 18px;padding:0;">
+            <li>Seluruh berkas dokumen dosir digital (PDF aktif & master warkat raw di server)</li>
+            <li>Pas foto profil prajurit di media penyimpanan server</li>
+            <li>Akun akses pengguna sistem (users) & riwayat login</li>
+            <li>Data riwayat dinas, jabatan, dan kelengkapan personel</li>
+          </ul>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="closeDeleteModalForm()">Batal</button>
+        <button type="submit" class="btn btn-danger" style="display:flex;align-items:center;gap:6px;">
+          🗑️ Ya, Hapus Personel & Seluruh Dokumen
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openDeleteModalForm() {
+  var modal = document.getElementById('modalDeletePersonelForm');
+  if (modal) modal.classList.add('show');
+}
+function closeDeleteModalForm() {
+  var modal = document.getElementById('modalDeletePersonelForm');
+  if (modal) modal.classList.remove('show');
+}
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.classList && e.target.classList.contains('modal-backdrop')) {
+    closeDeleteModalForm();
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDeleteModalForm();
+});
+</script>
+<?php endif; ?>
+
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+

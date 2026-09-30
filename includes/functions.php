@@ -1298,3 +1298,179 @@ function abort($code = 404, $customMessage = '', $customTitle = '', $customDetai
     http_response_code($code);
     die($customMessage ?: "Kesalahan HTTP $code");
 }
+
+/**
+ * Hapus berkas fisik di server secara aman dari path relatif atau absolut.
+ * Menghindari path traversal dan mendukung variasi struktur folder uploads.
+ *
+ * @param string|null $relativePath
+ * @return bool
+ */
+function delete_physical_file_robust(?string $relativePath): bool {
+    if (!$relativePath || trim($relativePath) === '') {
+        return false;
+    }
+
+    $clean = str_replace(['..', "\0"], '', $relativePath);
+    $clean = ltrim(str_replace('\\', '/', $clean), '/');
+
+    // Potensi kandidat lokasi absolut berkas di server
+    $candidates = [
+        UPLOAD_DIR . '/' . $clean,
+        APP_ROOT . '/' . $clean,
+        UPLOAD_DIR . '/' . preg_replace('#^uploads/#i', '', $clean),
+        APP_ROOT . '/uploads/' . preg_replace('#^uploads/#i', '', $clean),
+    ];
+
+    $appRootNorm = str_replace('\\', '/', realpath(APP_ROOT) ?: APP_ROOT);
+    $deleted = false;
+
+    foreach (array_unique($candidates) as $fullPath) {
+        if (file_exists($fullPath) && is_file($fullPath)) {
+            $real = realpath($fullPath) ?: $fullPath;
+            $realNorm = str_replace('\\', '/', $real);
+            // Pastikan file berada di dalam ruang lingkup aplikasi
+            if (strpos($realNorm, $appRootNorm) === 0) {
+                if (@unlink($real)) {
+                    $deleted = true;
+                }
+            }
+        }
+    }
+    return $deleted;
+}
+
+/**
+ * Hapus data personel secara kaskade terpadu:
+ * - Menghapus seluruh berkas dosir digital (dosir_files)
+ * - Menghapus seluruh file fisik PDF aktif dan master warkat (raw) di disk server
+ * - Menghapus pas foto profil di disk server
+ * - Menghapus akun akses login prajurit (users) dan riwayat upaya login (login_attempts)
+ * - Menghapus entitas master personel
+ * - Mencatat audit trail ke activity_log
+ *
+ * @param PDO $pdo
+ * @param int $personelId
+ * @param int|null $adminId
+ * @return array
+ */
+function delete_personel_cascade(PDO $pdo, int $personelId, ?int $adminId = null): array {
+    if ($personelId <= 0) {
+        return ['success' => false, 'message' => 'ID personel tidak valid.', 'deleted_files' => 0];
+    }
+
+    // 1. Ambil data personel
+    $stmt = $pdo->prepare("SELECT * FROM personel WHERE id = ?");
+    $stmt->execute([$personelId]);
+    $p = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$p) {
+        return ['success' => false, 'message' => 'Data personel tidak ditemukan dalam pangkalan data.', 'deleted_files' => 0];
+    }
+
+    // 2. Proteksi Akun Sedang Login & Administrator
+    $currentUser = function_exists('current_user') ? current_user() : null;
+    $currentUserId = $adminId ?: ($currentUser['id'] ?? null);
+
+    if ($currentUser && (int)($currentUser['personel_id'] ?? 0) === $personelId) {
+        return ['success' => false, 'message' => 'Tindakan ditolak: Anda tidak dapat menghapus data personel Anda sendiri yang sedang aktif digunakan.', 'deleted_files' => 0];
+    }
+
+    // Cari user yang terhubung dengan personel
+    $stmtU = $pdo->prepare("SELECT id, username, role FROM users WHERE personel_id = ? OR (role = 'personel' AND username = ?)");
+    $stmtU->execute([$personelId, $p['nrp']]);
+    $associatedUsers = $stmtU->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($associatedUsers as $au) {
+        if ($currentUserId && (int)$au['id'] === (int)$currentUserId) {
+            return ['success' => false, 'message' => 'Tindakan ditolak: Data personel ini terhubung dengan akun Admin yang sedang login.', 'deleted_files' => 0];
+        }
+        if ($au['role'] === 'admin') {
+            return ['success' => false, 'message' => 'Tindakan ditolak: Data personel ini terhubung dengan akun Administrator sistem (' . htmlspecialchars($au['username']) . '). Hapus hak admin terlebih dahulu jika memang ingin menghapus.', 'deleted_files' => 0];
+        }
+    }
+
+    // 3. Kumpulkan seluruh berkas dosir untuk dihapus fisiknya dari disk
+    $stmtF = $pdo->prepare("SELECT id, dosir_kode, file_name, file_path, raw_file_path FROM dosir_files WHERE personel_id = ?");
+    $stmtF->execute([$personelId]);
+    $files = $stmtF->fetchAll(PDO::FETCH_ASSOC);
+    $totalFiles = count($files);
+
+    $filesToUnlink = [];
+    foreach ($files as $f) {
+        if (!empty($f['file_path'])) {
+            $filesToUnlink[] = $f['file_path'];
+        }
+        if (!empty($f['raw_file_path'])) {
+            $filesToUnlink[] = $f['raw_file_path'];
+        }
+    }
+    if (!empty($p['foto'])) {
+        $filesToUnlink[] = $p['foto'];
+    }
+
+    // 4. Eksekusi Transaksi Basis Data
+    $pdo->beginTransaction();
+    try {
+        // A. Bersihkan login attempts
+        $userNames = array_unique(array_filter(array_merge([$p['nrp']], array_column($associatedUsers, 'username'))));
+        if (!empty($userNames)) {
+            $inMarks = implode(',', array_fill(0, count($userNames), '?'));
+            $stmtAtt = $pdo->prepare("DELETE FROM login_attempts WHERE username IN ($inMarks)");
+            $stmtAtt->execute(array_values($userNames));
+        }
+
+        // B. Putus / bersihkan referensi foreign key di dosir_files & backup_log
+        foreach ($associatedUsers as $au) {
+            $uId = (int)$au['id'];
+            $pdo->prepare("UPDATE dosir_files SET uploaded_by = NULL WHERE uploaded_by = ?")->execute([$uId]);
+            $pdo->prepare("UPDATE dosir_files SET verified_by = NULL WHERE verified_by = ?")->execute([$uId]);
+            $pdo->prepare("UPDATE backup_log SET created_by = NULL WHERE created_by = ?")->execute([$uId]);
+            // Hapus user
+            $pdo->prepare("DELETE FROM users WHERE id = ?")->execute([$uId]);
+        }
+
+        // C. Hapus data dosir_files
+        $pdo->prepare("DELETE FROM dosir_files WHERE personel_id = ?")->execute([$personelId]);
+
+        // D. Hapus data personel
+        $pdo->prepare("DELETE FROM personel WHERE id = ?")->execute([$personelId]);
+
+        // E. Catat Audit Trail
+        if ($currentUserId) {
+            log_activity(
+                $pdo,
+                $currentUserId,
+                'DELETE_PERSONEL',
+                "Menghapus permanen personel NRP {$p['nrp']} ({$p['nama']}), beserta {$totalFiles} berkas dosir digital dan akun sistem terkait."
+            );
+        }
+
+        $pdo->commit();
+    } catch (\Throwable $e) {
+        $pdo->rollBack();
+        error_log("Error delete_personel_cascade for ID $personelId: " . $e->getMessage());
+        return [
+            'success' => false,
+            'message' => 'Gagal menghapus data personel dari basis data: ' . $e->getMessage(),
+            'deleted_files' => 0
+        ];
+    }
+
+    // 5. Hapus berkas fisik dari disk penyimpanan server setelah transaksi DB sukses
+    $diskDeletedCount = 0;
+    foreach ($filesToUnlink as $relPath) {
+        if (delete_physical_file_robust($relPath)) {
+            $diskDeletedCount++;
+        }
+    }
+
+    return [
+        'success' => true,
+        'message' => "Data personel {$p['nama']} (NRP: {$p['nrp']}) berhasil dihapus permanen beserta {$totalFiles} rekaman dosir ({$diskDeletedCount} berkas fisik di server) dan akun akses terkait.",
+        'deleted_files' => $totalFiles,
+        'deleted_disk_files' => $diskDeletedCount,
+        'personel' => $p
+    ];
+}
+
