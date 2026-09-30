@@ -21,6 +21,7 @@ uploads/foto_profil/*
 !vendor/**/*.pdf
 
 # 3. Cadangan Database & Arsip Ekspor Sementara
+*.zip
 backups/*
 !backups/.gitkeep
 !backups/.htaccess

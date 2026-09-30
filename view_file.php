@@ -39,19 +39,67 @@ if ($record) {
         abort(403, 'Akses Ditolak: Anda tidak memiliki hak wewenang untuk melihat berkas arsip prajurit lain.', 'Pelanggaran Privasi Berkas');
     }
 
-    // Resolusi path fleksibel untuk toleransi berbagai penamaan folder di uploads
+    // Resolusi path fleksibel untuk toleransi berbagai penamaan folder di uploads & Linux case-sensitivity
     $relFile = str_replace('\\', '/', $record['file_path']);
-    $cleanRel = preg_replace('#^uploads/#i', '', ltrim($relFile, '/'));
-    $candidates = [
-        UPLOAD_DIR . '/' . $cleanRel,
-        APP_ROOT . '/' . $cleanRel,
-        UPLOAD_DIR . '/' . $relFile,
-        APP_ROOT . '/' . $relFile,
+    $rawRelFile = !empty($record['raw_file_path']) ? str_replace('\\', '/', $record['raw_file_path']) : null;
+    $fileName = basename($relFile);
+    $dosirKode = str_pad($record['dosir_kode'] ?? '', 2, '0', STR_PAD_LEFT);
+
+    $possibleRelPaths = [
+        $relFile,
+        preg_replace('#^uploads/#i', '', ltrim($relFile, '/')),
     ];
-    foreach ($candidates as $cand) {
-        if (file_exists($cand) && is_file($cand)) {
-            $targetPhysicalPath = $cand;
-            break;
+
+    if ($rawRelFile) {
+        $possibleRelPaths[] = $rawRelFile;
+        $possibleRelPaths[] = preg_replace('#^uploads/#i', '', ltrim($rawRelFile, '/'));
+    }
+
+    // Variasi penamaan folder (FOLDER 02, folder 02, Folder 02, 02)
+    $folderVariations = [
+        'FOLDER ' . $dosirKode,
+        'folder ' . $dosirKode,
+        'Folder ' . $dosirKode,
+        $dosirKode,
+        (int)$dosirKode,
+    ];
+
+    foreach ($folderVariations as $fv) {
+        $possibleRelPaths[] = $fv . '/' . $fileName;
+        $possibleRelPaths[] = 'raw/' . $fv . '/' . $fileName;
+    }
+
+    foreach (array_unique($possibleRelPaths) as $pRel) {
+        $cleanP = ltrim($pRel, '/');
+        $testCandidates = [
+            UPLOAD_DIR . '/' . $cleanP,
+            APP_ROOT . '/uploads/' . $cleanP,
+            APP_ROOT . '/' . $cleanP,
+        ];
+        foreach ($testCandidates as $cand) {
+            if (file_exists($cand) && is_file($cand)) {
+                $targetPhysicalPath = $cand;
+                break 2;
+            }
+        }
+    }
+
+    // Jika belum ketemu, pencarian case-insensitive otomatis di dalam subfolder uploads
+    if (!$targetPhysicalPath && $fileName !== '') {
+        $subDirs = @glob(UPLOAD_DIR . '/*', GLOB_ONLYDIR) ?: [];
+        foreach ($subDirs as $sd) {
+            $probe = $sd . '/' . $fileName;
+            if (file_exists($probe) && is_file($probe)) {
+                $targetPhysicalPath = $probe;
+                break;
+            }
+            if (is_dir($sd . '/raw')) {
+                $probeRaw = $sd . '/raw/' . $fileName;
+                if (file_exists($probeRaw) && is_file($probeRaw)) {
+                    $targetPhysicalPath = $probeRaw;
+                    break;
+                }
+            }
         }
     }
 } else {
@@ -79,7 +127,11 @@ if ($record) {
 }
 
 if (!$targetPhysicalPath || !file_exists($targetPhysicalPath)) {
-    abort(404, 'Berkas dosir fisik tidak ditemukan pada sistem penyimpanan atau telah dipindahkan dari arsip.');
+    $detailMsg = 'Target berkas di pangkalan data: ' . htmlspecialchars($record['file_path'] ?? $filePath);
+    if (($u['role'] ?? '') === 'admin') {
+        $detailMsg .= "\nDirektori Upload Server: " . UPLOAD_DIR . "\nCatatan: Berkas ini belum diunggah ke folder uploads/ server hosting.";
+    }
+    abort(404, 'Berkas dosir fisik tidak ditemukan pada sistem penyimpanan atau belum diunggah ke server hosting.', 'Berkas Fisik Tidak Ditemukan', $detailMsg);
 }
 
 $realTarget = realpath($targetPhysicalPath);
