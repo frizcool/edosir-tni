@@ -21,11 +21,16 @@ $stmt->execute([$id]);
 $p = $stmt->fetch();
 if (!$p) { set_flash('error', 'Data personel tidak ditemukan.'); redirect('/admin/personel_list.php'); }
 
-// Pastikan akun user login selalu tersedia untuk personel ini
-$uAccountRes = ensure_personel_user($pdo, $id, $p['nrp'], 'approved');
+// Ambil akun user login jika ada, atau buatkan jika belum pernah ada
 $stmtU = $pdo->prepare("SELECT * FROM users WHERE personel_id=?");
 $stmtU->execute([$id]);
 $uAccount = $stmtU->fetch();
+
+if (!$uAccount) {
+    ensure_personel_user($pdo, $id, $p['nrp'], 'approved');
+    $stmtU->execute([$id]);
+    $uAccount = $stmtU->fetch();
+}
 
 // Tangani aksi cepat kontrol akun user dari halaman detail
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_action']) && $uAccount) {
@@ -35,6 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_action']) && $uA
         $pdo->prepare("UPDATE users SET status='approved' WHERE id=?")->execute([$uAccount['id']]);
         log_activity($pdo, $admin['id'], 'APPROVAL_USER', "User #{$uAccount['id']} (NRP {$p['nrp']}) diverifikasi");
         set_flash('success', 'Akun login personel berhasil diverifikasi dan diaktifkan.');
+    } elseif ($act === 'reject') {
+        $catatan = trim($_POST['catatan'] ?? '');
+        $pdo->prepare("UPDATE users SET status='rejected', catatan_approval=? WHERE id=?")->execute([$catatan !== '' ? $catatan : null, $uAccount['id']]);
+        $logTxt = "User #{$uAccount['id']} (NRP {$p['nrp']}) ditolak" . ($catatan !== '' ? " (Alasan: $catatan)" : '');
+        log_activity($pdo, $admin['id'], 'APPROVAL_USER', $logTxt);
+        set_flash('success', 'Akun login personel berhasil ditolak.');
     } elseif ($act === 'deactivate') {
         $pdo->prepare("UPDATE users SET status='nonaktif' WHERE id=?")->execute([$uAccount['id']]);
         log_activity($pdo, $admin['id'], 'APPROVAL_USER', "User #{$uAccount['id']} (NRP {$p['nrp']}) dinonaktifkan");
@@ -94,14 +105,37 @@ include __DIR__ . '/../includes/header.php';
           Status: <span class="badge badge-<?= $uAccount['status'] ?>"><?= strtoupper($uAccount['status']) ?></span>
           <span style="font-size:12px;color:var(--text-dim);margin-left:6px;">(Password default: NRP)</span>
         </div>
+        <?php if ($uAccount['status'] === 'rejected' && !empty($uAccount['catatan_approval'])): ?>
+          <div style="font-size:12px;color:var(--danger);margin-top:4px;">
+            <strong>Catatan Penolakan:</strong> <?= htmlspecialchars($uAccount['catatan_approval']) ?>
+          </div>
+        <?php endif; ?>
       </div>
-      <form method="post" style="display:flex;gap:6px;">
+      <form method="post" id="detailUserActionForm" style="display:flex;gap:6px;">
         <?= csrf_field() ?>
+        <input type="hidden" name="catatan" id="detailCatatanInput" value="">
         <?php if ($uAccount['status'] !== 'approved'): ?>
           <button type="submit" name="user_action" value="approve" class="btn" style="padding:5px 10px;font-size:12px;background:var(--ok);" onclick="return confirm('Verifikasi dan aktifkan akun login personel ini?');">
             ✓ Verifikasi Akun
           </button>
-        <?php else: ?>
+        <?php endif; ?>
+        <?php if ($uAccount['status'] === 'pending'): ?>
+          <button type="button" class="btn btn-danger" style="padding:5px 10px;font-size:12px;" onclick="
+            var r = prompt('Masukkan alasan penolakan pendaftaran akun:');
+            if (r !== null) {
+              document.getElementById('detailCatatanInput').value = r.trim();
+              var act = document.createElement('input');
+              act.type = 'hidden';
+              act.name = 'user_action';
+              act.value = 'reject';
+              document.getElementById('detailUserActionForm').appendChild(act);
+              document.getElementById('detailUserActionForm').submit();
+            }
+          ">
+            ✕ Tolak Akun
+          </button>
+        <?php endif; ?>
+        <?php if ($uAccount['status'] === 'approved'): ?>
           <button type="submit" name="user_action" value="deactivate" class="btn btn-outline" style="padding:5px 10px;font-size:12px;" onclick="return confirm('Nonaktifkan akun personel ini?');">
             Nonaktifkan
           </button>

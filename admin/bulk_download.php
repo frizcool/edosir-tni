@@ -50,6 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('/admin/bulk_download.php');
     }
 
+    if (!class_exists('ZipArchive')) {
+        set_flash('error', 'Ekstensi PHP ZipArchive belum diaktifkan pada server hosting Anda. Silakan aktifkan via cPanel / php.ini.');
+        redirect('/admin/bulk_download.php');
+    }
+
     ensure_dir(EXPORT_DIR);
     cleanup_expired_exports(); // Hapus berkas ekspor kadaluarsa (> 24 jam)
     @set_time_limit(300);      // Berikan waktu proses cukup untuk arsip besar
@@ -78,6 +83,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/zip');
     header('Content-Disposition: attachment; filename="' . $zipName . '"');
     header('Content-Length: ' . filesize($zipPath));
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
     readfile($zipPath);
     exit;
 }

@@ -4,7 +4,22 @@ require_once __DIR__ . '/../includes/watermark.php';
 require_role('personel');
 
 $u = current_user();
-$personel_id = $u['personel_id'];
+$personel_id = (int)($u['personel_id'] ?? 0);
+
+// Self-healing jika personel_id belum tersinkron di session atau users table
+if (!$personel_id) {
+    $stmtFind = $pdo->prepare("SELECT id FROM personel WHERE nrp = ? LIMIT 1");
+    $stmtFind->execute([$u['username'] ?? '']);
+    $foundPId = $stmtFind->fetchColumn();
+    if ($foundPId) {
+        $personel_id = (int)$foundPId;
+        $pdo->prepare("UPDATE users SET personel_id = ? WHERE id = ?")->execute([$personel_id, $u['id']]);
+        $_SESSION['user']['personel_id'] = $personel_id;
+    } else {
+        set_flash('error', 'Profil data personel Anda belum tertaut dalam pangkalan data. Harap hubungi staf pers / administrator.');
+        redirect('/personel/dashboard.php');
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') redirect('/personel/upload.php');
 
@@ -44,7 +59,7 @@ if ($file['size'] > MAX_UPLOAD_SIZE) {
 $stmtP = $pdo->prepare("SELECT nrp, nama FROM personel WHERE id=?");
 $stmtP->execute([$personel_id]);
 $personelRow = $stmtP->fetch();
-$nrp = $personelRow['nrp'] ?? '00000000';
+$nrp = !empty($personelRow['nrp']) ? $personelRow['nrp'] : ($u['username'] ?? '00000000');
 
 // Tentukan slot abjad untuk dosir berikutnya (a, b, c...)
 $abjad = next_abjad_slot($pdo, $personel_id, $kode);
@@ -52,47 +67,59 @@ $fileName = build_dosir_filename($nrp, $kode, $abjad);
 
 $folder = folder_dosir($kode);
 
-// 1. Simpan Berkas Master Bersih (Clean Original) di folder raw/
-$rawDir = UPLOAD_DIR . '/raw/' . $folder;
-ensure_dir($rawDir);
-$rawPath = $rawDir . '/' . $fileName;
+$rawPath = null;
+$activePath = null;
 
-if (!move_uploaded_file($file['tmp_name'], $rawPath)) {
-    set_flash('error', 'Gagal menyimpan berkas master di server.');
+try {
+    // 1. Simpan Berkas Master Bersih (Clean Original) di folder raw/
+    $rawDir = UPLOAD_DIR . '/raw/' . $folder;
+    ensure_dir($rawDir);
+    $rawPath = $rawDir . '/' . $fileName;
+
+    if (!move_uploaded_file($file['tmp_name'], $rawPath)) {
+        set_flash('error', 'Gagal menyimpan berkas master di server penyimpanan.');
+        redirect('/personel/upload.php?kode=' . urlencode($kode));
+    }
+
+    // 2. Buat Berkas Aktif yang Diberi Watermark "BELUM TERVERIFIKASI"
+    $activeDir = UPLOAD_DIR . '/' . $folder;
+    ensure_dir($activeDir);
+    $activePath = $activeDir . '/' . $fileName;
+
+    $metaLabel = "NRP $nrp &middot; " . date('d-m-Y H:i');
+    $wmText = get_setting($pdo, 'watermark_text', 'BELUM TERVERIFIKASI');
+    $watermarked = apply_unverified_watermark($rawPath, $activePath, $metaLabel, $wmText);
+
+    if (!$watermarked) {
+        // Fallback jika pustaka rendering belum aktif
+        copy($rawPath, $activePath);
+    }
+
+    $activeRelPath = $folder . '/' . $fileName;
+    $rawRelPath    = 'raw/' . $folder . '/' . $fileName;
+    $rawHash       = file_exists($rawPath) ? hash_file('sha256', $rawPath) : null;
+
+    // 3. Simpan Catatan Berkas ke Basis Data (is_watermarked = 1 karena status masih pending)
+    $ins = $pdo->prepare("
+        INSERT INTO dosir_files (
+            personel_id, dosir_kode, abjad, file_name, file_path, raw_file_path,
+            original_name, keterangan, status, is_watermarked, raw_hash, uploaded_by
+        ) VALUES (?,?,?,?,?,?,?,?,'pending',1,?,?)
+    ");
+    $ins->execute([
+        $personel_id, $kode, $abjad, $fileName, $activeRelPath, $rawRelPath,
+        $file['name'], $keterangan, $rawHash, $u['id']
+    ]);
+
+    log_activity($pdo, $u['id'], 'UPLOAD_DOSIR', "Unggah DOSIR $kode ($fileName) - Berkas berwatermark 'BELUM TERVERIFIKASI'");
+
+    set_flash('success', "Berkas $fileName berhasil diunggah dengan status 'BELUM TERVERIFIKASI' dan sedang menunggu verifikasi admin.");
+    redirect('/personel/dashboard.php');
+} catch (Throwable $e) {
+    // Bersihkan file yang sempat tersimpan jika terjadi error database
+    if ($rawPath && file_exists($rawPath)) @unlink($rawPath);
+    if ($activePath && file_exists($activePath)) @unlink($activePath);
+    error_log('Upload Process Error: ' . $e->getMessage());
+    set_flash('error', 'Terjadi kesalahan sistem saat menyimpan berkas: ' . htmlspecialchars($e->getMessage()));
     redirect('/personel/upload.php?kode=' . urlencode($kode));
 }
-
-// 2. Buat Berkas Aktif yang Diberi Watermark "BELUM TERVERIFIKASI"
-$activeDir = UPLOAD_DIR . '/' . $folder;
-ensure_dir($activeDir);
-$activePath = $activeDir . '/' . $fileName;
-
-$metaLabel = "NRP $nrp &middot; " . date('d-m-Y H:i');
-$wmText = get_setting($pdo, 'watermark_text', 'BELUM TERVERIFIKASI');
-$watermarked = apply_unverified_watermark($rawPath, $activePath, $metaLabel, $wmText);
-
-if (!$watermarked) {
-    // Fallback jika pustaka rendering belum aktif
-    copy($rawPath, $activePath);
-}
-
-$activeRelPath = $folder . '/' . $fileName;
-$rawRelPath    = 'raw/' . $folder . '/' . $fileName;
-$rawHash       = file_exists($rawPath) ? hash_file('sha256', $rawPath) : null;
-
-// 3. Simpan Catatan Berkas ke Basis Data (is_watermarked = 1 karena status masih pending)
-$ins = $pdo->prepare("
-    INSERT INTO dosir_files (
-        personel_id, dosir_kode, abjad, file_name, file_path, raw_file_path,
-        original_name, keterangan, status, is_watermarked, raw_hash, uploaded_by
-    ) VALUES (?,?,?,?,?,?,?,?,'pending',1,?,?)
-");
-$ins->execute([
-    $personel_id, $kode, $abjad, $fileName, $activeRelPath, $rawRelPath,
-    $file['name'], $keterangan, $rawHash, $u['id']
-]);
-
-log_activity($pdo, $u['id'], 'UPLOAD_DOSIR', "Unggah DOSIR $kode ($fileName) - Berkas berwatermark 'BELUM TERVERIFIKASI'");
-
-set_flash('success', "Berkas $fileName berhasil diunggah dengan status 'BELUM TERVERIFIKASI' dan sedang menunggu verifikasi admin.");
-redirect('/personel/dashboard.php');

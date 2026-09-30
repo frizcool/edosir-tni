@@ -68,13 +68,13 @@ function do_login($pdo, $username, $password, &$error) {
                             FROM users u
                             LEFT JOIN personel p ON p.id = u.personel_id
                             LEFT JOIN master_pangkat mp ON mp.id = p.pangkat_id
-                            WHERE u.username = ?");
-    $stmt->execute([$username]);
+                            WHERE u.username = ? OR p.nrp = ? OR (p.email IS NOT NULL AND p.email != '' AND p.email = ?)");
+    $stmt->execute([$username, $username, $username]);
     $user = $stmt->fetch();
 
     if (!$user || !password_verify($password, $user['password'])) {
         record_failed_login($pdo, $ip, $username);
-        $error = 'Username/NRP atau kata sandi salah.';
+        $error = 'Email/NRP/Username atau kata sandi salah.';
         return false;
     }
     if ($user['status'] === 'pending') {
@@ -82,7 +82,8 @@ function do_login($pdo, $username, $password, &$error) {
         return false;
     }
     if ($user['status'] === 'rejected') {
-        $error = 'Registrasi Anda ditolak admin. Hubungi staf pers / admin satuan.';
+        $reason = !empty($user['catatan_approval']) ? ' Catatan: ' . htmlspecialchars($user['catatan_approval']) : '';
+        $error = 'Registrasi Anda ditolak admin.' . $reason . ' Hubungi staf pers / admin satuan.';
         return false;
     }
     if ($user['status'] === 'nonaktif') {
@@ -92,6 +93,9 @@ function do_login($pdo, $username, $password, &$error) {
 
     // Bersihkan riwayat kegagalan dan regenerasi ID sesi untuk mencegah session fixation
     clear_failed_logins($pdo, $ip, $username);
+    if (!empty($user['username']) && $user['username'] !== $username) {
+        clear_failed_logins($pdo, $ip, $user['username']);
+    }
     session_regenerate_id(true);
 
     unset($user['password']);

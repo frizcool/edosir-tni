@@ -62,11 +62,11 @@ if (!$targetPhysicalPath || !file_exists($targetPhysicalPath)) {
     abort(404, 'Berkas dosir fisik tidak ditemukan pada sistem penyimpanan atau telah dipindahkan dari arsip.');
 }
 
-// Pencegahan Directory Traversal
-$realUploadDir = realpath(UPLOAD_DIR);
-$realTarget    = realpath($targetPhysicalPath);
+// Pencegahan Directory Traversal (Normalisasi Path Lintas Sistem Operasi Linux & Windows)
+$normUploadDir = str_replace('\\', '/', strtolower(realpath(UPLOAD_DIR) ?: UPLOAD_DIR));
+$normTarget    = str_replace('\\', '/', strtolower(realpath($targetPhysicalPath) ?: $targetPhysicalPath));
 
-if (!$realTarget || strpos($realTarget, $realUploadDir) !== 0) {
+if (strpos($normTarget, $normUploadDir) !== 0) {
     abort(403, 'Akses ditolak: Percobaan akses path di luar direktori aman terdeteksi.', 'Directory Traversal Prevented');
 }
 
@@ -86,5 +86,8 @@ if (strpos($mimeType, 'image/') === 0) {
     header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
 }
 
+while (ob_get_level()) {
+    ob_end_clean();
+}
 readfile($realTarget);
 exit;

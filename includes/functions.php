@@ -547,13 +547,15 @@ function ensure_personel_user($pdo, $personel_id, $nrp, $status = 'pending', $pa
     }
 
     // Cek apakah ada akun dengan username = NRP yang belum terhubung personel_id
-    $stmt2 = $pdo->prepare("SELECT id, personel_id FROM users WHERE username = ?");
+    $stmt2 = $pdo->prepare("SELECT id, status, personel_id FROM users WHERE username = ?");
     $stmt2->execute([$nrp]);
     $user2 = $stmt2->fetch();
 
     if ($user2) {
+        // Pertahankan status yang sudah ada (misal pending/rejected) agar tidak ter-overwrite tanpa sengaja
+        $finalStatus = (!empty($user2['status'])) ? $user2['status'] : $status;
         $upd = $pdo->prepare("UPDATE users SET personel_id = ?, status = ? WHERE id = ?");
-        $upd->execute([$personel_id, $status, $user2['id']]);
+        $upd->execute([$personel_id, $finalStatus, $user2['id']]);
         if (!empty($password)) {
             $hash = password_hash($password, PASSWORD_DEFAULT);
             $updPass = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");

@@ -13,8 +13,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id > 0) {
         if (in_array($action, ['approved', 'rejected', 'nonaktif'], true)) {
             $stmt = $pdo->prepare("UPDATE users SET status=?, catatan_approval=? WHERE id=? AND role='personel'");
-            $stmt->execute([$action, $catatan, $id]);
-            log_activity($pdo, $admin['id'], 'APPROVAL_USER', "User #$id diubah menjadi: $action");
+            $stmt->execute([$action, $catatan !== '' ? $catatan : null, $id]);
+            $logDesc = "User #$id diubah menjadi: $action" . ($catatan !== '' ? " (Alasan: $catatan)" : '');
+            log_activity($pdo, $admin['id'], 'APPROVAL_USER', $logDesc);
             set_flash('success', 'Status akun personel berhasil diperbarui menjadi ' . strtoupper($action) . '.');
         } elseif ($action === 'reset_password') {
             // Ambil data user dan NRP
@@ -134,19 +135,36 @@ include __DIR__ . '/../includes/header.php';
       <?php endif; ?>
       <?php foreach ($pending as $row): ?>
       <tr>
-        <td style="font-family:monospace;font-weight:600;"><?= htmlspecialchars($row['username']) ?></td>
-        <td><strong><?= htmlspecialchars($row['nama'] ?? '-') ?></strong></td>
+        <td style="font-family:monospace;font-weight:600;">
+          <?php if (!empty($row['personel_id'])): ?>
+            <a href="<?= BASE_URL ?>/admin/personel_detail.php?id=<?= $row['personel_id'] ?>" style="color:var(--gold);text-decoration:underline;" title="Lihat Profil Lengkap">
+              <?= htmlspecialchars($row['username']) ?>
+            </a>
+          <?php else: ?>
+            <?= htmlspecialchars($row['username']) ?>
+          <?php endif; ?>
+        </td>
+        <td>
+          <?php if (!empty($row['personel_id'])): ?>
+            <a href="<?= BASE_URL ?>/admin/personel_detail.php?id=<?= $row['personel_id'] ?>" style="color:var(--text);font-weight:bold;text-decoration:none;" title="Lihat Profil Lengkap">
+              <?= htmlspecialchars($row['nama'] ?? '-') ?>
+            </a>
+          <?php else: ?>
+            <strong><?= htmlspecialchars($row['nama'] ?? '-') ?></strong>
+          <?php endif; ?>
+        </td>
         <td><?= htmlspecialchars($row['pangkat'] ?? '-') ?></td>
         <td><?= htmlspecialchars($row['satuan'] ?? '-') ?></td>
         <td><?= fmt_tgl($row['created_at']) ?></td>
         <td style="text-align:center;">
-          <form method="post" style="display:inline-flex;gap:6px;">
+          <form method="post" id="form-pending-<?= $row['id'] ?>" style="display:inline-flex;gap:6px;">
             <?= csrf_field() ?>
             <input type="hidden" name="user_id" value="<?= $row['id'] ?>">
+            <input type="hidden" name="catatan" id="catatan-pending-<?= $row['id'] ?>" value="">
             <button name="action" value="approved" class="btn" style="padding:6px 12px;font-size:12px;background:var(--ok);" onclick="return confirm('Verifikasi dan aktifkan akun ini agar personel dapat login?');">
               ✓ Setujui (Verifikasi)
             </button>
-            <button name="action" value="rejected" class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="return confirm('Tolak registrasi akun ini?');">
+            <button type="button" class="btn btn-danger" style="padding:6px 12px;font-size:12px;" onclick="tolakAkun(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['username']), ENT_QUOTES) ?>', 'pending')">
               ✕ Tolak
             </button>
           </form>
@@ -210,22 +228,42 @@ include __DIR__ . '/../includes/header.php';
             <?= htmlspecialchars($row['username']) ?>
           <?php endif; ?>
         </td>
-        <td><?= htmlspecialchars($row['nama'] ?? '-') ?></td>
+        <td>
+          <?php if (!empty($row['p_id'])): ?>
+            <a href="<?= BASE_URL ?>/admin/personel_detail.php?id=<?= $row['p_id'] ?>" style="color:var(--text);font-weight:bold;text-decoration:none;">
+              <?= htmlspecialchars($row['nama'] ?? '-') ?>
+            </a>
+          <?php else: ?>
+            <?= htmlspecialchars($row['nama'] ?? '-') ?>
+          <?php endif; ?>
+        </td>
         <td><?= htmlspecialchars($row['pangkat'] ?? '-') ?> &middot; <?= htmlspecialchars($row['satuan'] ?? '-') ?></td>
         <td>
           <span class="badge badge-<?= $row['status'] ?>">
             <?= strtoupper($row['status']) ?>
           </span>
+          <?php if ($row['status'] === 'rejected' && !empty($row['catatan_approval'])): ?>
+            <div style="font-size:11px;color:var(--danger);margin-top:4px;max-width:200px;line-height:1.25;">
+              <strong>Alasan:</strong> <?= htmlspecialchars($row['catatan_approval']) ?>
+            </div>
+          <?php endif; ?>
         </td>
         <td><?= $row['last_login'] ? fmt_tgl($row['last_login']) . ' ' . date('H:i', strtotime($row['last_login'])) : '<span style="color:var(--text-dim);font-size:12px;">Belum pernah</span>' ?></td>
         <td style="text-align:right;">
-          <form method="post" style="display:inline-flex;gap:4px;justify-content:flex-end;">
+          <form method="post" id="form-all-<?= $row['id'] ?>" style="display:inline-flex;gap:4px;justify-content:flex-end;">
             <?= csrf_field() ?>
             <input type="hidden" name="user_id" value="<?= $row['id'] ?>">
+            <input type="hidden" name="catatan" id="catatan-all-<?= $row['id'] ?>" value="">
 
             <?php if ($row['status'] !== 'approved'): ?>
               <button name="action" value="approved" class="btn" style="padding:5px 9px;font-size:11.5px;background:var(--ok);" title="Verifikasi / Aktifkan akun agar bisa login" onclick="return confirm('Verifikasi & aktifkan akun <?= htmlspecialchars($row['username']) ?>?');">
                 ✓ Verifikasi
+              </button>
+            <?php endif; ?>
+
+            <?php if ($row['status'] === 'pending'): ?>
+              <button type="button" class="btn btn-danger" style="padding:5px 9px;font-size:11.5px;" title="Tolak registrasi akun" onclick="tolakAkun(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($row['username']), ENT_QUOTES) ?>', 'all')">
+                ✕ Tolak
               </button>
             <?php endif; ?>
 
@@ -253,5 +291,23 @@ include __DIR__ . '/../includes/header.php';
 
   <?= render_pagination($page, $totalPagesAll, $totalRecordsAll, $perPage, $_GET, [10, 25, 50, 100]) ?>
 </div>
+
+<script>
+function tolakAkun(userId, username, formPrefix) {
+  var alasan = prompt('Masukkan alasan/catatan penolakan untuk akun ' + username + ' (opsional tapi disarankan agar personel tahu):');
+  if (alasan === null) return; // user batalkan prompt
+  
+  var form = document.getElementById('form-' + formPrefix + '-' + userId);
+  var catatanInput = document.getElementById('catatan-' + formPrefix + '-' + userId);
+  if (catatanInput) catatanInput.value = alasan.trim();
+
+  var actInput = document.createElement('input');
+  actInput.type = 'hidden';
+  actInput.name = 'action';
+  actInput.value = 'rejected';
+  form.appendChild(actInput);
+  form.submit();
+}
+</script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

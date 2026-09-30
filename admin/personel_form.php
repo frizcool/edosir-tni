@@ -74,6 +74,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'tmt_pensiun_proyeksi' => hitung_proyeksi_pensiun($_POST['tanggal_lahir'] ?: null, $golongan),
     ];
 
+    // Sinkronisasi teks satuan manual jika satuan_id belum terisi
+    $customSatText = trim($_POST['satuan'] ?? '');
+    if (!$satuanId && $customSatText !== '' && $customSatText !== 'custom') {
+        $data['satuan'] = $customSatText;
+    }
+
+    // Selesaikan relasi master rujukan (master_pangkat, master_korp, master_satuan, master_kotama)
+    resolve_and_save_personel_relations($pdo, $data);
+
     $statusAkun = $_POST['status_akun'] ?? 'approved';
     if (!in_array($statusAkun, ['approved', 'pending'], true)) {
         $statusAkun = 'approved';
@@ -115,30 +124,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($chk->fetch()) {
             $error = 'NRP ' . htmlspecialchars($data['nrp']) . ' sudah terdaftar pada personel lain.';
         } else {
-            if ($id) {
-                $sets = implode(',', array_map(fn($k) => "$k=?", array_keys($data)));
-                $stmt = $pdo->prepare("UPDATE personel SET $sets WHERE id=?");
-                $stmt->execute([...array_values($data), $id]);
+            try {
+                // Periksa skema tabel personel saat ini untuk toleransi terhadap migrasi database
+                $personelCols = [];
+                try {
+                    $colStmt = $pdo->query("SHOW COLUMNS FROM personel");
+                    while ($colRow = $colStmt->fetch(PDO::FETCH_ASSOC)) {
+                        $personelCols[] = $colRow['Field'];
+                    }
+                } catch (Throwable $e) {}
 
-                // Pastikan akun user tetap sinkron dengan NRP
-                ensure_personel_user($pdo, $id, $data['nrp'], 'approved');
+                // Saring field yang valid untuk tabel personel
+                $fieldsToSave = [];
+                foreach ($data as $colName => $colVal) {
+                    if (empty($personelCols) || in_array($colName, $personelCols, true)) {
+                        $fieldsToSave[$colName] = $colVal;
+                    }
+                }
+                // Tambahkan kolom warisan jika tabel produksi belum di-drop kolom lama
+                $legacyCols = ['golongan', 'pangkat', 'korp', 'satuan', 'kotama'];
+                foreach ($legacyCols as $lc) {
+                    if (in_array($lc, $personelCols, true) && !isset($fieldsToSave[$lc])) {
+                        $fieldsToSave[$lc] = $data[$lc] ?? '';
+                    }
+                }
 
-                log_activity($pdo, $admin['id'], 'UPDATE_PERSONEL', "Update personel #$id ({$data['nrp']})");
-                set_flash('success', 'Data personel dan relasi master berhasil diperbarui.');
-                redirect('/admin/personel_detail.php?id=' . $id);
-            } else {
-                $cols = implode(',', array_keys($data));
-                $marks = implode(',', array_fill(0, count($data), '?'));
-                $stmt = $pdo->prepare("INSERT INTO personel ($cols) VALUES ($marks)");
-                $stmt->execute(array_values($data));
-                $newId = (int)$pdo->lastInsertId();
+                if ($id) {
+                    $sets = implode(',', array_map(fn($k) => "`$k`=?", array_keys($fieldsToSave)));
+                    $stmt = $pdo->prepare("UPDATE personel SET $sets WHERE id=?");
+                    $stmt->execute([...array_values($fieldsToSave), $id]);
 
-                // Otomatis buatkan akun user untuk data personel baru
-                ensure_personel_user($pdo, $newId, $data['nrp'], $statusAkun);
+                    // Pastikan akun user tetap sinkron dengan NRP
+                    ensure_personel_user($pdo, $id, $data['nrp'], 'approved');
 
-                log_activity($pdo, $admin['id'], 'CREATE_PERSONEL', "Tambah personel baru #$newId (NRP {$data['nrp']}) - Akun $statusAkun");
-                set_flash('success', "Personel baru berhasil ditambahkan dan akun login (NRP: {$data['nrp']}) otomatis dibuatkan dengan status " . strtoupper($statusAkun) . ".");
-                redirect('/admin/personel_detail.php?id=' . $newId);
+                    log_activity($pdo, $admin['id'], 'UPDATE_PERSONEL', "Update personel #$id ({$data['nrp']})");
+                    set_flash('success', 'Data personel dan relasi master berhasil diperbarui.');
+                    redirect('/admin/personel_detail.php?id=' . $id);
+                } else {
+                    $cols = implode(',', array_map(fn($c) => "`$c`", array_keys($fieldsToSave)));
+                    $marks = implode(',', array_fill(0, count($fieldsToSave), '?'));
+                    $stmt = $pdo->prepare("INSERT INTO personel ($cols) VALUES ($marks)");
+                    $stmt->execute(array_values($fieldsToSave));
+                    $newId = (int)$pdo->lastInsertId();
+
+                    // Otomatis buatkan akun user untuk data personel baru
+                    ensure_personel_user($pdo, $newId, $data['nrp'], $statusAkun);
+
+                    log_activity($pdo, $admin['id'], 'CREATE_PERSONEL', "Tambah personel baru #$newId (NRP {$data['nrp']}) - Akun $statusAkun");
+                    set_flash('success', "Personel baru berhasil ditambahkan dan akun login (NRP: {$data['nrp']}) otomatis dibuatkan dengan status " . strtoupper($statusAkun) . ".");
+                    redirect('/admin/personel_detail.php?id=' . $newId);
+                }
+            } catch (Throwable $e) {
+                $error = 'Terjadi kesalahan sistem saat menyimpan data personel: ' . htmlspecialchars($e->getMessage());
             }
         }
     }

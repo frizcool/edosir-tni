@@ -3,11 +3,27 @@ require_once __DIR__ . '/../config/config.php';
 require_role('personel');
 
 $u = current_user();
-$personel_id = $u['personel_id'];
+$personel_id = (int)($u['personel_id'] ?? 0);
+
+if (!$personel_id) {
+    $stmtFind = $pdo->prepare("SELECT id FROM personel WHERE nrp = ? LIMIT 1");
+    $stmtFind->execute([$u['username'] ?? '']);
+    $foundPId = $stmtFind->fetchColumn();
+    if ($foundPId) {
+        $personel_id = (int)$foundPId;
+        $pdo->prepare("UPDATE users SET personel_id = ? WHERE id = ?")->execute([$personel_id, $u['id']]);
+        $_SESSION['user']['personel_id'] = $personel_id;
+    }
+}
 
 $stmt = $pdo->prepare("SELECT * FROM v_personel_lengkap WHERE id=?");
 $stmt->execute([$personel_id]);
 $p = $stmt->fetch();
+
+if (!$p) {
+    set_flash('error', 'Data profil personel Anda belum ditemukan atau belum tertaut. Hubungi administrator satuan.');
+    redirect('/personel/dashboard.php');
+}
 
 $msg = null;
 $error = null;
@@ -97,7 +113,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     }
 }
 
-$golPensiun = prediksi_pensiun($p['golongan'], $p['tanggal_lahir']);
+$golPensiun = prediksi_pensiun($p['golongan'] ?? 'Perwira', $p['tanggal_lahir'] ?? null);
 
 $pageTitle = 'Profil Saya';
 include __DIR__ . '/../includes/header.php';

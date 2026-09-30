@@ -50,7 +50,7 @@ if ($satuan !== '') {
     $sql .= " AND ms.nama = ?";
     $params[] = $satuan;
 }
-$sql .= " GROUP BY p.id ORDER BY p.nama ASC LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;
+$sql .= " GROUP BY p.id, mp.singkatan, mp.golongan, ms.nama ORDER BY p.nama ASC LIMIT " . (int)$perPage . " OFFSET " . (int)$offset;
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $list = $stmt->fetchAll();
@@ -90,7 +90,7 @@ include __DIR__ . '/../includes/header.php';
 
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-    <strong>Total: <?= count($list) ?> personel</strong>
+    <strong>Menampilkan <?= count($list) ?> dari total <?= number_format($totalRecords, 0, ',', '.') ?> personel</strong>
     <div style="display:flex;gap:8px;">
       <a href="<?= BASE_URL ?>/admin/personel_export.php?q=<?= urlencode($q) ?>&satuan=<?= urlencode($satuan) ?>" class="btn btn-outline" style="font-size:12.5px;">
         📥 Ekspor Excel / CSV
