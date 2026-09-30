@@ -431,14 +431,17 @@ function prediksi_pensiun($golongan, $tanggal_lahir) {
  * Standar Naskah Sekolah Disinfolahtad Nomor: 61 - A – 009
  * Batas Usia Pensiun (BUP): Perwira 58 th, Bintara/Tamtama 56 th, PNS 60 th
  */
-function hitung_proyeksi_pensiun(?string $tanggalLahir, string $golongan): ?string {
-    if (!$tanggalLahir) return null;
-    $usiaPensiun = USIA_PENSIUN[$golongan] ?? 56;
+function hitung_proyeksi_pensiun(?string $tanggalLahir, ?string $golongan = 'Perwira'): ?string {
+    if (!$tanggalLahir || empty($golongan)) return null;
+    $usiaPensiun = 56;
+    if (defined('USIA_PENSIUN') && is_array(USIA_PENSIUN) && isset(USIA_PENSIUN[$golongan])) {
+        $usiaPensiun = USIA_PENSIUN[$golongan];
+    }
     try {
         $lahir = new DateTime($tanggalLahir);
         $lahir->modify('+' . $usiaPensiun . ' years');
         return $lahir->format('Y-m-d');
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         return null;
     }
 }
@@ -514,7 +517,7 @@ function is_allowed_ext($filename) {
  * @param string $status 'pending'|'approved'|'rejected'|'nonaktif'
  * @return array ['user_id' => int, 'created' => bool]
  */
-function ensure_personel_user($pdo, $personel_id, $nrp, $status = 'pending') {
+function ensure_personel_user($pdo, $personel_id, $nrp, $status = 'pending', $password = null) {
     $nrp = trim($nrp);
     if ($nrp === '' || !$personel_id) {
         return ['user_id' => 0, 'created' => false];
@@ -535,6 +538,11 @@ function ensure_personel_user($pdo, $personel_id, $nrp, $status = 'pending') {
                 $upd->execute([$nrp, $user['id']]);
             }
         }
+        if (!empty($password)) {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $updPass = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $updPass->execute([$hash, $user['id']]);
+        }
         return ['user_id' => (int)$user['id'], 'created' => false];
     }
 
@@ -544,13 +552,19 @@ function ensure_personel_user($pdo, $personel_id, $nrp, $status = 'pending') {
     $user2 = $stmt2->fetch();
 
     if ($user2) {
-        $upd = $pdo->prepare("UPDATE users SET personel_id = ? WHERE id = ?");
-        $upd->execute([$personel_id, $user2['id']]);
+        $upd = $pdo->prepare("UPDATE users SET personel_id = ?, status = ? WHERE id = ?");
+        $upd->execute([$personel_id, $status, $user2['id']]);
+        if (!empty($password)) {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $updPass = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $updPass->execute([$hash, $user2['id']]);
+        }
         return ['user_id' => (int)$user2['id'], 'created' => false];
     }
 
-    // Jika belum ada, buatkan akun baru: username = NRP, password = hash(NRP)
-    $hash = password_hash($nrp, PASSWORD_DEFAULT);
+    // Jika belum ada, buatkan akun baru: password kustom atau fallback hash(NRP)
+    $passRaw = (!empty($password)) ? $password : $nrp;
+    $hash = password_hash($passRaw, PASSWORD_DEFAULT);
     $ins = $pdo->prepare("INSERT INTO users (username, password, role, personel_id, status) VALUES (?, ?, 'personel', ?, ?)");
     $ins->execute([$nrp, $hash, $personel_id, $status]);
     $userId = (int)$pdo->lastInsertId();
@@ -834,14 +848,19 @@ function resolve_and_save_personel_relations($pdo, &$data) {
             if (empty($data['golongan'])) {
                 $data['golongan'] = $row['golongan'];
             }
+        } else {
+            $data['pangkat_id'] = null;
         }
     } elseif (!empty($data['pangkat'])) {
-        $stmt = $pdo->prepare("SELECT id, singkatan FROM master_pangkat WHERE singkatan = ? OR kode = ? LIMIT 1");
+        $stmt = $pdo->prepare("SELECT id, singkatan, golongan FROM master_pangkat WHERE singkatan = ? OR kode = ? LIMIT 1");
         $stmt->execute([$data['pangkat'], $data['pangkat']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
-            $data['pangkat_id'] = $row['id'];
+            $data['pangkat_id'] = (int)$row['id'];
             $data['pangkat'] = $row['singkatan'];
+            if (empty($data['golongan'])) {
+                $data['golongan'] = $row['golongan'];
+            }
         }
     }
 
@@ -852,13 +871,15 @@ function resolve_and_save_personel_relations($pdo, &$data) {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $data['korp'] = $row['kode'];
+        } else {
+            $data['korp_id'] = null;
         }
     } elseif (!empty($data['korp'])) {
         $stmt = $pdo->prepare("SELECT id, kode FROM master_korp WHERE kode = ? OR nama = ? LIMIT 1");
         $stmt->execute([$data['korp'], $data['korp']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
-            $data['korp_id'] = $row['id'];
+            $data['korp_id'] = (int)$row['id'];
             $data['korp'] = $row['kode'];
         }
     }
@@ -870,43 +891,75 @@ function resolve_and_save_personel_relations($pdo, &$data) {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $data['kotama'] = $row['nama'];
+        } else {
+            $data['kotama_id'] = null;
         }
     } elseif (!empty($data['kotama'])) {
         $stmt = $pdo->prepare("SELECT id, nama FROM master_kotama WHERE nama = ? OR kode = ? LIMIT 1");
         $stmt->execute([$data['kotama'], $data['kotama']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
-            $data['kotama_id'] = $row['id'];
+            $data['kotama_id'] = (int)$row['id'];
             $data['kotama'] = $row['nama'];
         }
     }
 
     // 4. Satuan
     if (!empty($data['satuan_id'])) {
-        $stmt = $pdo->prepare("SELECT nama, kotama_id FROM master_satuan WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, nama, kotama_id FROM master_satuan WHERE id = ?");
         $stmt->execute([$data['satuan_id']]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
             $data['satuan'] = $row['nama'];
             if (empty($data['kotama_id']) && $row['kotama_id']) {
-                $data['kotama_id'] = $row['kotama_id'];
+                $data['kotama_id'] = (int)$row['kotama_id'];
                 $stmtK = $pdo->prepare("SELECT nama FROM master_kotama WHERE id = ?");
                 $stmtK->execute([$row['kotama_id']]);
-                $data['kotama'] = $stmtK->fetchColumn() ?: $data['kotama'];
+                $data['kotama'] = $stmtK->fetchColumn() ?: ($data['kotama'] ?? '');
             }
+        } else {
+            $data['satuan_id'] = null;
         }
-    } elseif (!empty($data['satuan'])) {
-        $stmt = $pdo->prepare("SELECT id, nama, kotama_id FROM master_satuan WHERE nama = ? OR kode = ? LIMIT 1");
-        $stmt->execute([$data['satuan'], $data['satuan']]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            $data['satuan_id'] = $row['id'];
-            $data['satuan'] = $row['nama'];
-            if (empty($data['kotama_id']) && $row['kotama_id']) {
-                $data['kotama_id'] = $row['kotama_id'];
-                $stmtK = $pdo->prepare("SELECT nama FROM master_kotama WHERE id = ?");
-                $stmtK->execute([$row['kotama_id']]);
-                $data['kotama'] = $stmtK->fetchColumn() ?: $data['kotama'];
+    }
+
+    // Tangani jika satuan_id belum terisi tapi teks satuan ada (Satuan manual/custom)
+    if (empty($data['satuan_id']) && !empty($data['satuan'])) {
+        $cleanSat = trim($data['satuan']);
+        if ($cleanSat !== '' && $cleanSat !== 'custom') {
+            $stmt = $pdo->prepare("SELECT id, nama, kotama_id FROM master_satuan WHERE nama = ? OR kode = ? LIMIT 1");
+            $stmt->execute([$cleanSat, $cleanSat]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $data['satuan_id'] = (int)$row['id'];
+                $data['satuan'] = $row['nama'];
+                if (empty($data['kotama_id']) && $row['kotama_id']) {
+                    $data['kotama_id'] = (int)$row['kotama_id'];
+                    $stmtK = $pdo->prepare("SELECT nama FROM master_kotama WHERE id = ?");
+                    $stmtK->execute([$row['kotama_id']]);
+                    $data['kotama'] = $stmtK->fetchColumn() ?: ($data['kotama'] ?? '');
+                }
+            } else {
+                // Buat entri baru di master_satuan agar tidak hilang dan relasi FK valid
+                try {
+                    $rawCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cleanSat));
+                    $baseCode = substr($rawCode ?: 'SAT', 0, 15);
+                    $finalCode = $baseCode;
+                    $iter = 1;
+                    while (true) {
+                        $chkCode = $pdo->prepare("SELECT COUNT(*) FROM master_satuan WHERE kode = ?");
+                        $chkCode->execute([$finalCode]);
+                        if ($chkCode->fetchColumn() == 0) break;
+                        $finalCode = substr($baseCode, 0, 11) . '_' . rand(100, 999);
+                        if (++$iter > 10) break;
+                    }
+                    $kId = !empty($data['kotama_id']) ? (int)$data['kotama_id'] : null;
+                    $ins = $pdo->prepare("INSERT INTO master_satuan (kode, nama, kotama_id) VALUES (?, ?, ?)");
+                    $ins->execute([$finalCode, $cleanSat, $kId]);
+                    $data['satuan_id'] = (int)$pdo->lastInsertId();
+                    $data['satuan'] = $cleanSat;
+                } catch (Throwable $e) {
+                    error_log('Gagal auto-insert custom satuan: ' . $e->getMessage());
+                }
             }
         }
     }

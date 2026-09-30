@@ -1420,3 +1420,208 @@ html, body {
     justify-content: center;
   }
 }
+
+/* =====================================================================
+   REGISTRASI PERSONEL MODERN (TACTICAL MILITARY GLASSMORPHISM)
+   ===================================================================== */
+.reg-card-container {
+  max-width: 840px;
+  width: 95%;
+  margin: 20px auto 40px;
+  position: relative;
+  z-index: 10;
+  animation: regFadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes regFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.reg-glass-card {
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-card-border);
+  border-radius: 20px;
+  padding: 34px 38px;
+  box-shadow: var(--glass-card-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.reg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+  margin-top: 10px;
+}
+
+.reg-grid-full {
+  grid-column: 1 / -1;
+}
+
+.reg-section-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.reg-section-badge {
+  font-family: var(--font-tech);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--primary-gold-bright);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+
+.reg-section-title {
+  font-family: var(--font-main);
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.reg-info-callout {
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-left: 4px solid var(--primary-gold);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin-bottom: 22px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.reg-info-callout strong {
+  color: var(--primary-gold-bright);
+}
+
+.form-select {
+  width: 100%;
+  background: var(--glass-input-bg);
+  border: 1px solid var(--glass-input-border);
+  border-radius: 10px;
+  color: var(--text-white);
+  padding: 12px 14px;
+  font-family: var(--font-main);
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.25s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+.form-select:focus {
+  border-color: var(--glass-input-focus);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18);
+  background-color: rgba(7, 21, 14, 0.95);
+}
+
+.form-select option, .form-select optgroup {
+  background-color: #0c1a12;
+  color: #ffffff;
+  padding: 8px;
+}
+
+.reg-success-box {
+  background: rgba(22, 101, 52, 0.18);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  border-radius: 16px;
+  padding: 26px;
+  text-align: center;
+  margin-top: 10px;
+  animation: regFadeIn 0.4s ease forwards;
+}
+
+.reg-success-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, 0.2);
+  border: 2px solid var(--success-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--success-color);
+}
+
+.reg-success-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.reg-success-detail {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 16px;
+  max-width: 460px;
+  margin: 16px auto;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.reg-success-detail .detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.07);
+}
+
+.reg-success-detail .detail-row:last-child {
+  border-bottom: none;
+}
+
+.reg-success-detail .detail-label {
+  color: var(--text-dim);
+}
+
+.reg-success-detail .detail-value {
+  color: var(--primary-gold-bright);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .reg-card-container {
+    width: 94%;
+    margin: 15px auto 30px;
+  }
+  .reg-glass-card {
+    padding: 22px 18px;
+  }
+  .reg-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
