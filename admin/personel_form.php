@@ -18,9 +18,7 @@ $p = [
 
 $userAccount = null;
 if ($id) {
-    $stmt = $pdo->prepare("SELECT * FROM v_personel_lengkap WHERE id=?");
-    $stmt->execute([$id]);
-    $found = $stmt->fetch();
+    $found = get_personel_lengkap($pdo, $id);
     if ($found) {
         $p = $found;
     }

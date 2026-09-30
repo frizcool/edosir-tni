@@ -616,6 +616,189 @@ function update_setting($pdo, $key, $value, $group = 'general') {
 }
 
 /**
+ * Memastikan Database View 'v_personel_lengkap' tersedia di pangkalan data hosting.
+ * Jika view belum dibuat (misal import SQL hanya memuat tabel), fungsi ini otomatis membuatnya.
+ */
+function ensure_v_personel_lengkap($pdo) {
+    static $done = false;
+    if ($done) return true;
+
+    try {
+        $pdo->query("SELECT 1 FROM v_personel_lengkap LIMIT 1");
+        $done = true;
+        return true;
+    } catch (Throwable $e) {
+        try {
+            $sql = "
+                CREATE OR REPLACE VIEW v_personel_lengkap AS
+                SELECT 
+                    p.id,
+                    p.nrp,
+                    p.nama,
+                    p.pangkat_id,
+                    mp.kode AS pangkat_kode,
+                    mp.nama AS pangkat_nama,
+                    mp.singkatan AS pangkat,
+                    mp.singkatan AS pangkat_singkatan,
+                    mp.golongan,
+                    mp.golongan AS pangkat_golongan,
+                    mp.bup_usia,
+                    p.korp_id,
+                    mk.kode AS korp,
+                    mk.kode AS korp_kode,
+                    mk.nama AS korp_nama,
+                    mk.kategori AS korp_kategori,
+                    p.satuan_id,
+                    ms.kode AS satuan_kode,
+                    ms.nama AS satuan,
+                    ms.nama AS satuan_nama,
+                    ms.lokasi AS satuan_lokasi,
+                    COALESCE(ms.kotama_id, p.kotama_id) AS kotama_id,
+                    mkot.kode AS kotama_kode,
+                    mkot.nama AS kotama,
+                    mkot.nama AS kotama_nama,
+                    mkot.tipe AS kotama_tipe,
+                    p.jabatan,
+                    p.tmt_jabatan,
+                    p.tmt_pangkat,
+                    p.tanggal_lahir,
+                    p.tempat_lahir,
+                    p.jenis_kelamin,
+                    p.agama,
+                    p.status_kawin,
+                    p.alamat,
+                    p.no_hp,
+                    p.email,
+                    p.foto,
+                    p.status_dinas,
+                    p.tmt_pensiun_proyeksi,
+                    u.id AS user_id,
+                    u.username,
+                    u.role AS user_role,
+                    u.status AS user_status,
+                    u.last_login,
+                    p.created_at,
+                    p.updated_at
+                FROM personel p
+                LEFT JOIN master_pangkat mp ON p.pangkat_id = mp.id
+                LEFT JOIN master_korp mk ON p.korp_id = mk.id
+                LEFT JOIN master_satuan ms ON p.satuan_id = ms.id
+                LEFT JOIN master_kotama mkot ON COALESCE(ms.kotama_id, p.kotama_id) = mkot.id
+                LEFT JOIN users u ON u.personel_id = p.id
+            ";
+            $pdo->exec($sql);
+            $done = true;
+            return true;
+        } catch (Throwable $e2) {
+            return false;
+        }
+    }
+}
+
+/**
+ * Mengambil data personel lengkap dengan relasi master secara aman & toleran.
+ * 100% toleran jika view 'v_personel_lengkap' belum ada atau hosting tidak mengizinkan CREATE VIEW.
+ *
+ * @param PDO $pdo
+ * @param int $id ID personel
+ * @return array|false
+ */
+function get_personel_lengkap($pdo, $id) {
+    $id = (int)$id;
+    if ($id <= 0) return false;
+
+    // 1. Coba kueri via v_personel_lengkap jika view tersedia
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM v_personel_lengkap WHERE id = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row !== false) {
+            return $row;
+        }
+    } catch (Throwable $e) {
+        // View belum ada di hosting, lanjut ke direct JOIN fallback
+    }
+
+    // 2. Kueri Langsung (Direct Relational JOIN) - 100% aman tanpa bergantung pada view
+    try {
+        $sql = "
+            SELECT 
+                p.id,
+                p.nrp,
+                p.nama,
+                p.pangkat_id,
+                mp.kode AS pangkat_kode,
+                mp.nama AS pangkat_nama,
+                COALESCE(mp.singkatan, '-') AS pangkat,
+                mp.singkatan AS pangkat_singkatan,
+                COALESCE(mp.golongan, 'Perwira') AS golongan,
+                mp.golongan AS pangkat_golongan,
+                mp.bup_usia,
+                p.korp_id,
+                COALESCE(mk.kode, '') AS korp,
+                mk.kode AS korp_kode,
+                mk.nama AS korp_nama,
+                mk.kategori AS korp_kategori,
+                p.satuan_id,
+                ms.kode AS satuan_kode,
+                COALESCE(ms.nama, 'TNI AD') AS satuan,
+                ms.nama AS satuan_nama,
+                ms.lokasi AS satuan_lokasi,
+                COALESCE(ms.kotama_id, p.kotama_id) AS kotama_id,
+                mkot.kode AS kotama_kode,
+                COALESCE(mkot.nama, '') AS kotama,
+                mkot.nama AS kotama_nama,
+                mkot.tipe AS kotama_tipe,
+                p.jabatan,
+                p.tmt_jabatan,
+                p.tmt_pangkat,
+                p.tanggal_lahir,
+                p.tempat_lahir,
+                p.jenis_kelamin,
+                p.agama,
+                p.status_kawin,
+                p.alamat,
+                p.no_hp,
+                p.email,
+                p.foto,
+                p.status_dinas,
+                p.tmt_pensiun_proyeksi,
+                u.id AS user_id,
+                u.username,
+                u.role AS user_role,
+                u.status AS user_status,
+                u.last_login,
+                p.created_at,
+                p.updated_at
+            FROM personel p
+            LEFT JOIN master_pangkat mp ON p.pangkat_id = mp.id
+            LEFT JOIN master_korp mk ON p.korp_id = mk.id
+            LEFT JOIN master_satuan ms ON p.satuan_id = ms.id
+            LEFT JOIN master_kotama mkot ON COALESCE(ms.kotama_id, p.kotama_id) = mkot.id
+            LEFT JOIN users u ON u.personel_id = p.id
+            WHERE p.id = ?
+        ";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Coba buatkan view otomatis jika server mengizinkan
+        ensure_v_personel_lengkap($pdo);
+
+        return $row !== false ? $row : false;
+    } catch (Throwable $e2) {
+        // Fallback darurat jika skema sangat minimal
+        try {
+            $stmtSimple = $pdo->prepare("SELECT * FROM personel WHERE id = ?");
+            $stmtSimple->execute([$id]);
+            return $stmtSimple->fetch(PDO::FETCH_ASSOC);
+        } catch (Throwable $e3) {
+            return false;
+        }
+    }
+}
+
+/**
  * Mengambil nilai unik dari kolom tabel personel untuk saran dropdown / autocomplete datalist
  */
 function get_distinct_personel_field($pdo, $fieldName) {
@@ -624,16 +807,30 @@ function get_distinct_personel_field($pdo, $fieldName) {
         return [];
     }
     try {
-        $stmt = $pdo->query("
-            SELECT DISTINCT $fieldName 
-            FROM v_personel_lengkap 
-            WHERE $fieldName IS NOT NULL AND $fieldName != '' 
-            ORDER BY $fieldName ASC
-        ");
-        return $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
-    } catch (Exception $e) {
+        if ($fieldName === 'satuan') {
+            $stmt = $pdo->query("SELECT nama FROM master_satuan ORDER BY nama ASC");
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        }
+        if ($fieldName === 'kotama') {
+            $stmt = $pdo->query("SELECT nama FROM master_kotama ORDER BY nama ASC");
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        }
+        if ($fieldName === 'korp') {
+            $stmt = $pdo->query("SELECT kode FROM master_korp ORDER BY kode ASC");
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        }
+        if ($fieldName === 'pangkat') {
+            $stmt = $pdo->query("SELECT singkatan FROM master_pangkat ORDER BY urutan ASC");
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        }
+        if (in_array($fieldName, ['agama', 'status_kawin'], true)) {
+            $stmt = $pdo->query("SELECT DISTINCT $fieldName FROM personel WHERE $fieldName IS NOT NULL AND $fieldName != '' ORDER BY $fieldName ASC");
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        }
+    } catch (Throwable $e) {
         return [];
     }
+    return [];
 }
 
 /**

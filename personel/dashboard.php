@@ -21,9 +21,7 @@ if (!$personel_id) {
 
 $p = null;
 if ($personel_id) {
-    $stmt = $pdo->prepare("SELECT * FROM v_personel_lengkap WHERE id=?");
-    $stmt->execute([$personel_id]);
-    $p = $stmt->fetch();
+    $p = get_personel_lengkap($pdo, $personel_id);
 }
 
 if (!$p) {

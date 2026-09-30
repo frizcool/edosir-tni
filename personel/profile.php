@@ -16,9 +16,7 @@ if (!$personel_id) {
     }
 }
 
-$stmt = $pdo->prepare("SELECT * FROM v_personel_lengkap WHERE id=?");
-$stmt->execute([$personel_id]);
-$p = $stmt->fetch();
+$p = get_personel_lengkap($pdo, $personel_id);
 
 if (!$p) {
     set_flash('error', 'Data profil personel Anda belum ditemukan atau belum tertaut. Hubungi administrator satuan.');
@@ -46,8 +44,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         log_activity($pdo, $u['id'], 'UPDATE_PROFIL', 'Personel memperbarui data kontak');
         $msg = 'Data kontak dan alamat berhasil diperbarui.';
 
-        $stmt->execute([$personel_id]);
-        $p = $stmt->fetch();
+        $p = get_personel_lengkap($pdo, $personel_id);
     }
 
     // 2. Upload Pas Foto Profil Prajurit
@@ -76,8 +73,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                     log_activity($pdo, $u['id'], 'UPDATE_FOTO', 'Personel mengunggah pas foto baru');
                     $msg = 'Pas foto profil berhasil diperbarui.';
 
-                    $stmt->execute([$personel_id]);
-                    $p = $stmt->fetch();
+                    $p = get_personel_lengkap($pdo, $personel_id);
                 } else {
                     $error = 'Gagal menyimpan file foto ke server.';
                 }
