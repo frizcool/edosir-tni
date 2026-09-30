@@ -1,4 +1,9 @@
 <?php
+/**
+ * TRISULA TNI AD - CONTROLLER PENGALIRAN BERKAS TERAUTENTIKASI (SECURE STREAMING)
+ * Mengalirkan dokumen dosir militer PDF dan foto profil secara aman dengan
+ * validasi wewenang, pencegahan traversal direktori, dan proteksi anti-cache.
+ */
 require_once __DIR__ . '/config/config.php';
 require_login();
 
@@ -33,7 +38,22 @@ if ($record) {
     if ($u['role'] !== 'admin' && (int)$record['personel_id'] !== (int)($u['personel_id'] ?? 0)) {
         abort(403, 'Akses Ditolak: Anda tidak memiliki hak wewenang untuk melihat berkas arsip prajurit lain.', 'Pelanggaran Privasi Berkas');
     }
-    $targetPhysicalPath = UPLOAD_DIR . '/' . $record['file_path'];
+
+    // Resolusi path fleksibel untuk toleransi berbagai penamaan folder di uploads
+    $relFile = str_replace('\\', '/', $record['file_path']);
+    $cleanRel = preg_replace('#^uploads/#i', '', ltrim($relFile, '/'));
+    $candidates = [
+        UPLOAD_DIR . '/' . $cleanRel,
+        APP_ROOT . '/' . $cleanRel,
+        UPLOAD_DIR . '/' . $relFile,
+        APP_ROOT . '/' . $relFile,
+    ];
+    foreach ($candidates as $cand) {
+        if (file_exists($cand) && is_file($cand)) {
+            $targetPhysicalPath = $cand;
+            break;
+        }
+    }
 } else {
     // Cek foto profil khusus
     $normPath = str_replace('\\', '/', $filePath);
@@ -53,7 +73,7 @@ if ($record) {
                 }
             }
             $ext = strtolower(pathinfo($candidate, PATHINFO_EXTENSION));
-            $mimeType = in_array($ext, ['png','webp','gif'], true) ? "image/$ext" : 'image/jpeg';
+            $mimeType = in_array($ext, ['png', 'webp', 'gif'], true) ? "image/$ext" : 'image/jpeg';
         }
     }
 }
@@ -62,18 +82,32 @@ if (!$targetPhysicalPath || !file_exists($targetPhysicalPath)) {
     abort(404, 'Berkas dosir fisik tidak ditemukan pada sistem penyimpanan atau telah dipindahkan dari arsip.');
 }
 
+$realTarget = realpath($targetPhysicalPath);
+if (!$realTarget || !is_file($realTarget)) {
+    abort(404, 'Berkas fisik tidak dapat diakses pada disk server.');
+}
+
 // Pencegahan Directory Traversal (Normalisasi Path Lintas Sistem Operasi Linux & Windows)
 $normUploadDir = str_replace('\\', '/', strtolower(realpath(UPLOAD_DIR) ?: UPLOAD_DIR));
-$normTarget    = str_replace('\\', '/', strtolower(realpath($targetPhysicalPath) ?: $targetPhysicalPath));
+$normTarget    = str_replace('\\', '/', strtolower($realTarget));
 
 if (strpos($normTarget, $normUploadDir) !== 0) {
     abort(403, 'Akses ditolak: Percobaan akses path di luar direktori aman terdeteksi.', 'Directory Traversal Prevented');
 }
 
+$downloadName = !empty($record['original_name']) ? $record['original_name'] : (!empty($record['file_name']) ? $record['file_name'] : basename($realTarget));
+$downloadName = preg_replace('/[^\w\.\-\s]/u', '_', $downloadName);
+
+// Bersihkan semua output buffer sebelum mengirim header biner
+while (ob_get_level()) {
+    ob_end_clean();
+}
+
 // Alirkan berkas ke browser
 header('Content-Type: ' . $mimeType);
-header('Content-Disposition: inline; filename="' . basename($realTarget) . '"');
+header('Content-Disposition: inline; filename="' . $downloadName . '"');
 header('Content-Length: ' . filesize($realTarget));
+header('Accept-Ranges: bytes');
 header('Last-Modified: ' . gmdate('D, d M Y H:i:s', filemtime($realTarget)) . ' GMT');
 
 if (strpos($mimeType, 'image/') === 0) {
@@ -86,8 +120,5 @@ if (strpos($mimeType, 'image/') === 0) {
     header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
 }
 
-while (ob_get_level()) {
-    ob_end_clean();
-}
 readfile($realTarget);
 exit;
