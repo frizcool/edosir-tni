@@ -30,7 +30,7 @@ if (!headers_sent()) {
 $appName       = 'TRISULA TNI AD';
 $appBrandTitle = 'TRISULA';
 $appBrandSub   = 'TNI AD';
-$baseUrl       = '/edosir-tni';
+$baseUrl       = '';
 $appLogo       = null;
 
 // Coba muat config jika belum dimuat
@@ -48,6 +48,11 @@ if (!defined('APP_ROOT')) {
 
 if (defined('BASE_URL')) {
     $baseUrl = BASE_URL;
+} else {
+    // Deteksi cerdas fallback jika config.php gagal dimuat
+    $serverName = $_SERVER['SERVER_NAME'] ?? ($_SERVER['HTTP_HOST'] ?? '');
+    $isLocal = in_array(strtolower(explode(':', $serverName)[0]), ['localhost', '127.0.0.1', '::1'], true);
+    $baseUrl = $isLocal ? '/edosir-tni' : '';
 }
 if (defined('APP_NAME')) {
     $appName = APP_NAME;

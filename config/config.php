@@ -99,12 +99,18 @@ if (!defined('BASE_URL')) {
         define('BASE_URL', '');
     } else {
         $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? str_replace('\\', '/', realpath($_SERVER['DOCUMENT_ROOT']) ?: $_SERVER['DOCUMENT_ROOT']) : '';
-        $appRoot = str_replace('\\', '/', APP_ROOT);
+        $appRoot = str_replace('\\', '/', realpath(APP_ROOT) ?: APP_ROOT);
+        $detectedBase = null;
         if ($docRoot && strpos($appRoot, $docRoot) === 0) {
-            $subPath = substr($appRoot, strlen($docRoot));
-            define('BASE_URL', rtrim($subPath, '/'));
+            $detectedBase = rtrim(substr($appRoot, strlen($docRoot)), '/');
+        }
+
+        if ($detectedBase !== null && $detectedBase !== '') {
+            define('BASE_URL', $detectedBase);
         } else {
-            define('BASE_URL', '/edosir-tni');
+            $serverName = $_SERVER['SERVER_NAME'] ?? ($_SERVER['HTTP_HOST'] ?? '');
+            $isLocal = in_array(strtolower(explode(':', $serverName)[0]), ['localhost', '127.0.0.1', '::1'], true);
+            define('BASE_URL', $isLocal ? '/edosir-tni' : '');
         }
     }
 }
@@ -131,6 +137,50 @@ if ($isProduction && !$isDebug) {
     ini_set('log_errors', '1');
     error_reporting(E_ALL);
 }
+
+// =====================================================================
+// GLOBAL EXCEPTION & FATAL ERROR HANDLER (Menangani Error 500 Terpadu)
+// =====================================================================
+set_exception_handler(function (\Throwable $e) use ($isDebug) {
+    error_log('Uncaught Exception [500]: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    $detail = $isDebug ? ($e->getMessage() . "\n" . $e->getFile() . ':' . $e->getLine()) : '';
+    $errorFile = defined('APP_ROOT') ? APP_ROOT . '/error.php' : dirname(__DIR__) . '/error.php';
+    $errorCode = 500;
+    $customMessage = 'Terjadi anomali pemrosesan instruksi pada server.';
+    $customTitle = 'Anomali Sistem Pusat';
+    $customDetail = $detail;
+    if (file_exists($errorFile)) {
+        include $errorFile;
+        exit;
+    }
+    http_response_code(500);
+    die('500 - Internal Server Error');
+});
+
+register_shutdown_function(function () use ($isDebug) {
+    $err = error_get_last();
+    if ($err !== null && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        error_log('Fatal Error [500]: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line']);
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        $detail = $isDebug ? ($err['message'] . "\n" . $err['file'] . ':' . $err['line']) : '';
+        $errorFile = defined('APP_ROOT') ? APP_ROOT . '/error.php' : dirname(__DIR__) . '/error.php';
+        $errorCode = 500;
+        $customMessage = 'Terjadi kegagalan fatal pada server saat memproses permintaan.';
+        $customTitle = 'Kegagalan Fatal Server';
+        $customDetail = $detail;
+        if (file_exists($errorFile)) {
+            include $errorFile;
+            exit;
+        }
+        http_response_code(500);
+        die('500 - Fatal Server Error');
+    }
+});
 
 define('UPLOAD_DIR', APP_ROOT . '/uploads');
 define('BACKUP_DIR', APP_ROOT . '/backups');

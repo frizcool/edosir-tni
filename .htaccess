@@ -21,11 +21,16 @@ Options -Indexes
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Blokir akses HTTP langsung ke direktori internal sistem
+    # Blokir akses HTTP langsung ke direktori internal sistem (menghasilkan 403)
     RewriteRule ^(config|sql|vendor|includes|backups|exports)/ - [F,L]
 
     # Blokir berkas tersembunyi berawalan titik (.env, .git, .htaccess)
     RewriteRule (^|/)\.(env|git|htaccess|htpasswd) - [F,L]
+
+    # Rewrite otomatis untuk 404 jika berkas atau folder tidak ditemukan (fleksibel root & subfolder)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^.*$ error.php?code=404 [L,QSA]
 </IfModule>
 
 # 4. HTTP Security Headers (Defensive in-depth)
@@ -38,19 +43,13 @@ Options -Indexes
     Header always set Permissions-Policy "camera=(self), microphone=(), geolocation=()"
 </IfModule>
 
-# 5. Penanganan Halaman Kesalahan Kustom (Custom Error Handling)
-# CATATAN HOSTING: Jika diunggah di root domain (public_html langsung),
-# hapus awalan '/edosir-tni' menjadi '/error.php?code=xxx'
-<IfModule !mod_authz_core.c>
-    ErrorDocument 401 /edosir-tni/error.php?code=401
-    ErrorDocument 403 /edosir-tni/error.php?code=403
-    ErrorDocument 404 /edosir-tni/error.php?code=404
-    ErrorDocument 500 /edosir-tni/error.php?code=500
-</IfModule>
-<IfModule mod_authz_core.c>
-    ErrorDocument 401 /edosir-tni/error.php?code=401
-    ErrorDocument 403 /edosir-tni/error.php?code=403
-    ErrorDocument 404 /edosir-tni/error.php?code=404
-    ErrorDocument 500 /edosir-tni/error.php?code=500
-</IfModule>
+# 5. Penanganan Halaman Kesalahan Kustom Apache (Custom Error Handling)
+# Sesuai dengan konfigurasi domain hosting root (public_html)
+ErrorDocument 400 /error.php?code=400
+ErrorDocument 401 /error.php?code=401
+ErrorDocument 403 /error.php?code=403
+ErrorDocument 404 /error.php?code=404
+ErrorDocument 500 /error.php?code=500
+ErrorDocument 503 /error.php?code=503
+
 
