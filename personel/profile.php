@@ -96,13 +96,20 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
         if (!password_verify($oldPass, $currHash)) {
             $error = 'Kata sandi saat ini tidak cocok.';
-        } elseif (strlen($newPass) < 6) {
-            $error = 'Kata sandi baru minimal 6 karakter.';
+        } elseif (strlen($newPass) < 8 || !preg_match('/[A-Za-z]/', $newPass) || !preg_match('/[0-9]/', $newPass)) {
+            $error = 'Kata sandi baru minimal 8 karakter dan harus mengandung kombinasi huruf dan angka.';
         } elseif ($newPass !== $confirmPass) {
             $error = 'Konfirmasi kata sandi baru tidak cocok.';
         } else {
             $newHash = password_hash($newPass, PASSWORD_DEFAULT);
-            $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([$newHash, $u['id']]);
+            try {
+                $pdo->prepare("UPDATE users SET password=?, must_change_password=0 WHERE id=?")->execute([$newHash, $u['id']]);
+            } catch (Throwable $e) {
+                $pdo->prepare("UPDATE users SET password=? WHERE id=?")->execute([$newHash, $u['id']]);
+            }
+            if (isset($_SESSION['user']['must_change_password'])) {
+                $_SESSION['user']['must_change_password'] = 0;
+            }
             log_activity($pdo, $u['id'], 'GANTI_PASSWORD', 'Personel mengganti kata sandi akun');
             $msg = 'Kata sandi akun Anda berhasil diperbarui!';
         }
@@ -111,12 +118,21 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
 $golPensiun = prediksi_pensiun($p['golongan'] ?? 'Perwira', $p['tanggal_lahir'] ?? null);
 
+$isForceChange = ($_GET['action'] ?? '') === 'change_password_required';
+
 $pageTitle = 'Profil Saya';
 include __DIR__ . '/../includes/header.php';
 ?>
 
 <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
+
+<?php if ($isForceChange && !$msg): ?>
+<div class="alert alert-error" style="border-left:4px solid #e53e3e;font-weight:600;">
+  ⚠ Akun Anda menggunakan kata sandi sementara. Anda <strong>wajib mengganti kata sandi</strong> sebelum dapat menggunakan fitur lainnya.
+  Gulir ke bawah ke bagian <strong>"Keamanan &amp; Kata Sandi"</strong> dan perbarui sekarang.
+</div>
+<?php endif; ?>
 
 <div class="grid grid-2">
   <!-- Kolom Kiri: Foto & Kedinasan -->
@@ -205,23 +221,23 @@ include __DIR__ . '/../includes/header.php';
     </div>
 
     <!-- Kartu Ganti Kata Sandi -->
-    <div class="card">
+    <div class="card" id="ganti-sandi">
       <h3 style="margin-top:0;">Keamanan &amp; Kata Sandi</h3>
       <p style="font-size:12.5px;color:var(--text-dim);margin-top:2px;">
-        Ganti kata sandi awal (NRP) dengan kata sandi pribadi yang aman dan mudah Anda ingat.
+        Ganti kata sandi dengan kata sandi pribadi yang aman (minimal 8 karakter kombinasi huruf dan angka).
       </p>
       <form method="post">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="change_password">
         
         <label>Kata Sandi Saat Ini *</label>
-        <input type="password" name="password_current" placeholder="Masukkan kata sandi lama / NRP" required>
+        <input type="password" name="password_current" placeholder="Masukkan kata sandi lama" required>
 
-        <label>Kata Sandi Baru * (Min 6 karakter)</label>
-        <input type="password" name="password_new" placeholder="Masukkan kata sandi baru" required>
+        <label>Kata Sandi Baru * (Min 8 karakter kombinasi huruf &amp; angka)</label>
+        <input type="password" name="password_new" placeholder="Minimal 8 karakter kombinasi" minlength="8" required>
 
         <label>Ulangi Kata Sandi Baru *</label>
-        <input type="password" name="password_confirm" placeholder="Ulangi kata sandi baru" required>
+        <input type="password" name="password_confirm" placeholder="Ulangi kata sandi baru" minlength="8" required>
 
         <button class="btn btn-outline" type="submit">Perbarui Kata Sandi</button>
       </form>
@@ -230,3 +246,19 @@ include __DIR__ . '/../includes/header.php';
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
+
+<?php if ($isForceChange): ?>
+<script>
+  // Auto-scroll ke form ganti kata sandi
+  document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('ganti-sandi');
+    if (el) {
+      setTimeout(function () {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.style.outline = '2px solid #e53e3e';
+        el.style.borderRadius = '10px';
+      }, 300);
+    }
+  });
+</script>
+<?php endif; ?>

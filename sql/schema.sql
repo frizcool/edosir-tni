@@ -245,6 +245,7 @@ CREATE TABLE IF NOT EXISTS users (
   catatan_approval TEXT NULL,
   last_login DATETIME NULL,
   theme_pref ENUM('dark','light') DEFAULT 'dark',
+  must_change_password TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_personel (personel_id),

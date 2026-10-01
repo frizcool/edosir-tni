@@ -38,8 +38,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
         $error = 'Format NRP tidak valid. NRP harus terdiri dari 4-20 karakter alfanumerik tanpa spasi.';
     } elseif (empty($pangkat_id)) {
         $error = 'Pangkat Resmi wajib dipilih sesuai golongan kepangkatan.';
-    } elseif ($password !== '' && strlen($password) < 6) {
-        $error = 'Kata sandi minimal 6 karakter demi standar keamanan akun.';
+    } elseif ($password !== '' && (strlen($password) < 8 || !preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password))) {
+        $error = 'Kata sandi minimal 8 karakter dan harus mengandung kombinasi huruf dan angka.';
     } elseif ($password !== '' && $password !== $password_conf) {
         $error = 'Konfirmasi kata sandi tidak cocok. Harap periksa kembali.';
     } else {
@@ -142,7 +142,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                     'nama'     => $nama,
                     'pangkat'  => $regData['pangkat'] ?: $golongan,
                     'satuan'   => $regData['satuan'] ?: 'TNI AD',
-                    'password' => !empty($password) ? 'Kata sandi pribadi yang Anda tentukan' : "NRP ($nrp)",
+                    'password' => !empty($password) ? 'Kata sandi pribadi yang Anda tentukan' : (!empty($userAccount['temporary_password']) ? 'Sandi acak sementara: ' . $userAccount['temporary_password'] . ' (Wajib diganti saat login)' : 'Sandi acak dibuat otomatis'),
                 ];
                 $success = "Pendaftaran Akun Dosir Berhasil!";
             }
@@ -413,8 +413,8 @@ $jsVersion      = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtim
                         name="password" 
                         id="regPassword" 
                         class="form-input" 
-                        placeholder="Default menggunakan NRP jika kosong"
-                        minlength="6"
+                        placeholder="Minimal 8 karakter kombinasi huruf & angka"
+                        minlength="8"
                         autocomplete="new-password">
                       <button type="button" class="password-toggle-btn" id="toggleRegPassBtn" title="Tampilkan Kata Sandi" aria-label="Toggle Password">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -423,7 +423,7 @@ $jsVersion      = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtim
                         </svg>
                       </button>
                     </div>
-                    <div class="form-helper">Kosongkan jika ingin menggunakan NRP sebagai sandi awal.</div>
+                    <div class="form-helper">Kosongkan jika ingin dibuatkan sandi acak sementara (wajib ganti saat pertama login).</div>
                   </div>
                 </div>
 
@@ -438,7 +438,7 @@ $jsVersion      = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtim
                         id="regPasswordConf" 
                         class="form-input" 
                         placeholder="Ketik ulang kata sandi baru"
-                        minlength="6"
+                        minlength="8"
                         autocomplete="new-password">
                       <button type="button" class="password-toggle-btn" id="toggleRegPassConfBtn" title="Tampilkan Konfirmasi Sandi" aria-label="Toggle Confirm Password">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -694,7 +694,7 @@ $jsVersion      = file_exists(__DIR__ . '/assets/js/login-modern.js') ? filemtim
         <button type="button" class="modal-close-btn" data-close-modal title="Tutup Modal">&times;</button>
         <div class="modal-title">Layanan E-Dosir TRISULA</div>
         <div class="modal-body">
-          <p>Portal digital ini melayani 33 berkas warkat dosir prajurit, verifikasi berkas berjenjang, dan penerbitan tanda tangan digital (TTE) ber-QR Code resmi.</p>
+          <p>Portal digital ini melayani 33 berkas warkat dosir prajurit, verifikasi berkas terpadu oleh Staf Personel Satuan, dan penerbitan tanda tangan digital (TTE) ber-QR Code resmi.</p>
         </div>
         <div class="modal-footer">
           <a href="<?= BASE_URL ?>/verify.php" class="modal-btn modal-btn-primary">Verifikasi QR Code</a>

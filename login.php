@@ -13,6 +13,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
     if ($username === '' || $password === '') {
         $error = 'Username/NRP dan kata sandi wajib diisi.';
     } elseif (do_login($pdo, $username, $password, $error)) {
+        if (!empty($_SESSION['user']['must_change_password'])) {
+            set_flash('error', 'Demi keamanan, Anda wajib memperbarui kata sandi sebelum melanjutkan.');
+            if ($_SESSION['user']['role'] === 'admin') {
+                redirect('/admin/settings.php?action=change_password_required#ganti-sandi');
+            } else {
+                redirect('/personel/profile.php?action=change_password_required');
+            }
+        }
         redirect($_SESSION['user']['role'] === 'admin' ? '/admin/dashboard.php' : '/personel/dashboard.php');
     }
 }
@@ -561,7 +569,7 @@ $showLoginByDefault = !empty($error) || !empty($flash) || (isset($_GET['action']
         </div>
 
         <p style="font-size:12.5px;color:var(--text-dim);margin-top:10px;">
-          Catatan: Untuk personel yang baru mendaftar, kata sandi awal secara sistem adalah <strong>NRP</strong> Anda sendiri setelah akun disetujui (Approved) oleh Administrator.
+          Catatan: Untuk personel yang baru mendaftar atau di-reset oleh Admin, kata sandi awal adalah <strong>sandi acak sementara (8 karakter)</strong> yang diberikan oleh Administrator Satuan. Anda wajib menggantinya saat pertama kali login.
         </p>
       </div>
       <div class="modal-footer">

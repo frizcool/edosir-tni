@@ -100,10 +100,23 @@ $pageTitle = $pageTitle ?? APP_NAME;
     </header>
     <main class="content">
       <?php $f = get_flash(); if ($f): ?>
-        <div class="alert alert-<?= htmlspecialchars($f['type']) ?>"><?= htmlspecialchars($f['msg']) ?></div>
+        <div class="alert alert-<?= htmlspecialchars($f['type']) ?>"><?php
+          if (!empty($f['html'])) {
+              // Izinkan hanya tag <strong> dan <b> untuk keamanan
+              echo strip_tags($f['msg'], '<strong><b>');
+          } else {
+              echo htmlspecialchars($f['msg']);
+          }
+        ?></div>
       <?php endif; ?>
 <?php else: ?>
   <?php $f = get_flash(); if ($f): ?>
-    <div class="alert alert-<?= htmlspecialchars($f['type']) ?>" style="margin:16px auto;max-width:420px;"><?= htmlspecialchars($f['msg']) ?></div>
+    <div class="alert alert-<?= htmlspecialchars($f['type']) ?>" style="margin:16px auto;max-width:420px;"><?php
+      if (!empty($f['html'])) {
+          echo strip_tags($f['msg'], '<strong><b>');
+      } else {
+          echo htmlspecialchars($f['msg']);
+      }
+    ?></div>
   <?php endif; ?>
 <?php endif; ?>

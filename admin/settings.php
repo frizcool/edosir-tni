@@ -142,8 +142,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
 
         if (!password_verify($oldPass, $currHash)) {
             $error = 'Kata sandi saat ini tidak sesuai.';
-        } elseif (strlen($newPass) < 6) {
-            $error = 'Kata sandi baru minimal 6 karakter.';
+        } elseif (strlen($newPass) < 8 || !preg_match('/[A-Za-z]/', $newPass) || !preg_match('/[0-9]/', $newPass)) {
+            $error = 'Kata sandi baru minimal 8 karakter dan harus mengandung kombinasi huruf dan angka.';
         } elseif ($newPass !== $confirmPass) {
             $error = 'Konfirmasi kata sandi baru tidak cocok.';
         } else {
@@ -411,12 +411,12 @@ include __DIR__ . '/../includes/header.php';
 
         <div style="margin-bottom:12px;">
           <label>Kata Sandi Baru *</label>
-          <input type="password" name="new_password" required placeholder="Minimal 6 karakter" minlength="6">
+          <input type="password" name="new_password" required placeholder="Minimal 8 karakter kombinasi huruf & angka" minlength="8">
         </div>
 
         <div style="margin-bottom:16px;">
           <label>Konfirmasi Kata Sandi Baru *</label>
-          <input type="password" name="confirm_password" required placeholder="Ulangi kata sandi baru" minlength="6">
+          <input type="password" name="confirm_password" required placeholder="Ulangi kata sandi baru" minlength="8">
         </div>
 
         <button type="submit" class="btn btn-outline" style="width:100%;padding:9px;">

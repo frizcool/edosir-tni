@@ -28,9 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $uRow = $stmt->fetch();
             if ($uRow) {
                 $targetNrp = $uRow['nrp'] ?: $uRow['username'];
-                reset_user_password_to_nrp($pdo, $id, $targetNrp);
-                log_activity($pdo, $admin['id'], 'RESET_PASSWORD', "Reset password user #$id ke NRP ($targetNrp)");
-                set_flash('success', "Kata sandi user '{$uRow['username']}' berhasil di-reset kembali ke NRP default ($targetNrp).");
+                $tempPass = reset_user_password_to_nrp($pdo, $id, $targetNrp);
+                log_activity($pdo, $admin['id'], 'RESET_PASSWORD', "Reset password user #$id ke sandi acak sementara");
+                set_flash('success', "Kata sandi user '{$uRow['username']}' berhasil di-reset ke sandi sementara: <strong>" . htmlspecialchars($tempPass) . "</strong>. Pengguna wajib mengganti kata sandi.");
             }
         }
     }

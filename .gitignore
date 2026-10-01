@@ -33,6 +33,8 @@ exports/*
 flowchart/
 DOKUMENTASI_SISTEM_TRISULA_TNI_AD.*
 generate_dokumentasi_word.php
+generate_resume_*.php
+RESUME_PERBAIKAN_*.docx
 assets/img/reference_login.png
 
 # 5. Skrip Migrasi & Analisis Basis Data Sementara (Dev Scripts)

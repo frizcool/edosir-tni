@@ -10,8 +10,8 @@ function redirect($path) {
 }
 
 /** Flash message sederhana via session */
-function set_flash($type, $msg) {
-    $_SESSION['flash'] = ['type' => $type, 'msg' => $msg];
+function set_flash($type, $msg, $html = false) {
+    $_SESSION['flash'] = ['type' => $type, 'msg' => $msg, 'html' => $html];
 }
 function get_flash() {
     if (!empty($_SESSION['flash'])) {
@@ -564,23 +564,38 @@ function ensure_personel_user($pdo, $personel_id, $nrp, $status = 'pending', $pa
         return ['user_id' => (int)$user2['id'], 'created' => false];
     }
 
-    // Jika belum ada, buatkan akun baru: password kustom atau fallback hash(NRP)
-    $passRaw = (!empty($password)) ? $password : $nrp;
+    // Jika belum ada, buatkan akun baru: gunakan password yang diinput atau buat sandi acak sementara
+    $mustChange = empty($password) ? 1 : 0;
+    $passRaw = (!empty($password)) ? $password : strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
     $hash = password_hash($passRaw, PASSWORD_DEFAULT);
-    $ins = $pdo->prepare("INSERT INTO users (username, password, role, personel_id, status) VALUES (?, ?, 'personel', ?, ?)");
-    $ins->execute([$nrp, $hash, $personel_id, $status]);
+
+    try {
+        $ins = $pdo->prepare("INSERT INTO users (username, password, role, personel_id, status, must_change_password) VALUES (?, ?, 'personel', ?, ?, ?)");
+        $ins->execute([$nrp, $hash, $personel_id, $status, $mustChange]);
+    } catch (Throwable $e) {
+        $ins = $pdo->prepare("INSERT INTO users (username, password, role, personel_id, status) VALUES (?, ?, 'personel', ?, ?)");
+        $ins->execute([$nrp, $hash, $personel_id, $status]);
+    }
     $userId = (int)$pdo->lastInsertId();
 
-    return ['user_id' => $userId, 'created' => true];
+    return ['user_id' => $userId, 'created' => true, 'temporary_password' => $mustChange ? $passRaw : null];
 }
 
 /**
- * Reset password akun user personel kembali ke NRP default
+ * Reset kata sandi akun user personel ke kata sandi acak sementara (bukan plain NRP)
+ * Mengembalikan kata sandi sementara dalam bentuk string agar dapat diberikan ke prajurit.
  */
-function reset_user_password_to_nrp($pdo, $user_id, $nrp) {
-    $hash = password_hash(trim($nrp), PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
-    return $stmt->execute([$hash, $user_id]);
+function reset_user_password_to_nrp($pdo, $user_id, $nrp = '') {
+    $temporaryPassword = strtoupper(substr(bin2hex(random_bytes(4)), 0, 8)); // 8 karakter acak misal: E48A1B9F
+    $hash = password_hash($temporaryPassword, PASSWORD_DEFAULT);
+    try {
+        $stmt = $pdo->prepare("UPDATE users SET password = ?, must_change_password = 1 WHERE id = ?");
+        $stmt->execute([$hash, $user_id]);
+    } catch (Throwable $e) {
+        $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+        $stmt->execute([$hash, $user_id]);
+    }
+    return $temporaryPassword;
 }
 
 /**

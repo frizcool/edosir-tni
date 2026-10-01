@@ -6,8 +6,27 @@ $admin = current_user();
 $dosirList = get_dosir_master($pdo);
 $personelPreset = (int) ($_GET['personel_id'] ?? 0);
 
+$filterSatuan = trim($_GET['satuan'] ?? '');
+$qPers = trim($_GET['q'] ?? '');
+
 $satuanOptions = $pdo->query("SELECT DISTINCT ms.nama FROM master_satuan ms JOIN personel p ON p.satuan_id = ms.id ORDER BY ms.nama")->fetchAll(PDO::FETCH_COLUMN);
-$personelOptions = $pdo->query("SELECT id, nama, nrp FROM personel ORDER BY nama")->fetchAll();
+
+// Optimasi: Muat personel dengan batas wajar dan filter untuk mencegah beban memori berlebih
+$persQuery = "SELECT p.id, p.nama, p.nrp FROM personel p LEFT JOIN master_satuan ms ON ms.id=p.satuan_id WHERE 1=1";
+$persParams = [];
+if ($filterSatuan !== '') {
+    $persQuery .= " AND ms.nama = ?";
+    $persParams[] = $filterSatuan;
+}
+if ($qPers !== '') {
+    $persQuery .= " AND (p.nama LIKE ? OR p.nrp LIKE ?)";
+    $persParams[] = "%$qPers%";
+    $persParams[] = "%$qPers%";
+}
+$persQuery .= " ORDER BY p.nama LIMIT 150";
+$stmtPers = $pdo->prepare($persQuery);
+$stmtPers->execute($persParams);
+$personelOptions = $stmtPers->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
@@ -47,6 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($files)) {
         set_flash('error', 'Tidak ada berkas yang sesuai dengan filter yang dipilih.');
+        redirect('/admin/bulk_download.php');
+    }
+
+    // Proteksi batas kuota unduh massal agar terhindar dari Memory Exhaustion / Gateway Timeout
+    if (count($files) > 300) {
+        set_flash('error', 'Jumlah berkas (' . count($files) . ') melebihi batas aman pemrosesan ZIP sekaligus (Maksimal 300 berkas). Harap persempit pilihan Satuan atau Jenis Dosir.');
         redirect('/admin/bulk_download.php');
     }
 
@@ -109,6 +134,9 @@ include __DIR__ . '/../includes/header.php';
         </select>
 
         <label>Atau Pilih Personel Tertentu (opsional, bisa multi)</label>
+        <div style="font-size:11.5px;color:var(--text-dim);margin-bottom:4px;">
+          Menampilkan hingga 150 personel teratas. Pilih Satuan untuk memuat daftar per satuan spesifik.
+        </div>
         <select name="personel_ids[]" multiple size="8">
           <?php foreach ($personelOptions as $p): ?>
             <option value="<?= $p['id'] ?>" <?= $personelPreset === (int)$p['id'] ? 'selected' : '' ?>>

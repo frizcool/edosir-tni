@@ -40,6 +40,25 @@ function require_login() {
     }
 
     $_SESSION['last_activity'] = time();
+
+    // Wajib ganti kata sandi: blokir akses ke halaman lain selain halaman ganti sandi
+    if (!empty($_SESSION['user']['must_change_password'])) {
+        $currentUri = $_SERVER['REQUEST_URI'] ?? '';
+        $isAdmin    = ($_SESSION['user']['role'] ?? '') === 'admin';
+
+        // Tentukan halaman tujuan yang diizinkan untuk role masing-masing
+        $allowedPath = $isAdmin ? '/admin/settings.php' : '/personel/profile.php';
+
+        // Izinkan akses ke halaman tujuan itu sendiri dan halaman logout
+        if (strpos($currentUri, $allowedPath) === false && strpos($currentUri, '/logout.php') === false) {
+            set_flash('error', 'Anda wajib memperbarui kata sandi terlebih dahulu sebelum dapat mengakses fitur lainnya.');
+            if ($isAdmin) {
+                redirect('/admin/settings.php?action=change_password_required#ganti-sandi');
+            } else {
+                redirect('/personel/profile.php?action=change_password_required');
+            }
+        }
+    }
 }
 
 function require_role($role) {

@@ -2,6 +2,15 @@
 require_once __DIR__ . '/../config/config.php';
 require_admin();
 
+// Normalisasi URL malformed (misal akses: report.php?report.php?print_all=1)
+if (isset($_SERVER['QUERY_STRING']) && (strpos($_SERVER['QUERY_STRING'], 'report.php') !== false || strpos($_SERVER['REQUEST_URI'] ?? '', 'report.php?report.php') !== false)) {
+    $cleanQuery = preg_replace('/^report\.php\?+/i', '', $_SERVER['QUERY_STRING']);
+    $cleanQuery = str_ireplace(['report.php?', 'report.php'], '', $cleanQuery);
+    $cleanQuery = ltrim($cleanQuery, '?&');
+    header('Location: ' . BASE_URL . '/admin/report.php' . ($cleanQuery !== '' ? '?' . $cleanQuery : ''), true, 302);
+    exit;
+}
+
 $jenis          = $_GET['jenis'] ?? 'kelengkapan';
 $satuan         = trim($_GET['satuan'] ?? '');
 $filterPensiun  = $_GET['filter_pensiun'] ?? 'all';
@@ -59,6 +68,19 @@ foreach ($personelList as $p) {
     $rows[] = compact('p', 'k', 'tglPensiun', 'sisaBulan', 'lamaJabatan');
 }
 
+// Logika Paginasi Laporan Kedinasan
+$totalRecords = count($rows);
+$perPage = max(10, min(100, (int)($_GET['per_page'] ?? 25)));
+$isPrintAll = (isset($_GET['all']) && $_GET['all'] == '1')
+           || (isset($_GET['print_all']) && $_GET['print_all'] == '1')
+           || (isset($_SERVER['QUERY_STRING']) && (strpos($_SERVER['QUERY_STRING'], 'print_all=1') !== false || strpos($_SERVER['QUERY_STRING'], 'all=1') !== false));
+$page = max(1, (int)($_GET['page'] ?? 1));
+$totalPages = max(1, (int)ceil($totalRecords / $perPage));
+if ($page > $totalPages) $page = $totalPages;
+
+$offset = ($page - 1) * $perPage;
+$displayRows = $isPrintAll ? $rows : array_slice($rows, $offset, $perPage);
+
 // Data Pejabat Penandatangan Laporan dari Pengaturan Sistem
 $pejabatNama    = get_setting($pdo, 'pejabat_nama', 'HENDRA PRATAMA, S.I.P.');
 $pejabatPangkat = get_setting($pdo, 'pejabat_pangkat', 'MAYOR INF');
@@ -69,8 +91,22 @@ $pageTitle = 'Laporan Kedinasan';
 include __DIR__ . '/../includes/header.php';
 ?>
 
+<?php if ($isPrintAll): ?>
+<div class="alert alert-info no-print" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+  <div>
+    <strong>🖨 Mode Cetak Seluruh Data Aktif:</strong> Menampilkan seluruh <strong><?= number_format($totalRecords) ?></strong> data personel tanpa batasan paginasi.
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-sm" type="button" onclick="window.print()">🖨 Cetak Sekarang</button>
+    <a href="<?= BASE_URL ?>/admin/report.php?jenis=<?= urlencode($jenis) ?>&satuan=<?= urlencode($satuan) ?>&filter_pensiun=<?= urlencode($filterPensiun) ?>&filter_jabatan=<?= urlencode($filterJabatan) ?>" class="btn btn-outline btn-sm">
+      ✕ Kembali ke Mode Normal
+    </a>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="card no-print" style="margin-bottom:16px;">
-  <form method="get" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)) auto;gap:16px;align-items:end;">
+  <form method="get" action="<?= BASE_URL ?>/admin/report.php" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)) auto;gap:16px;align-items:end;">
     <div>
       <label>Jenis Laporan</label>
       <select name="jenis" onchange="this.form.submit()">
@@ -116,7 +152,9 @@ include __DIR__ . '/../includes/header.php';
         <a href="<?= BASE_URL ?>/admin/report_export.php?jenis=<?= urlencode($jenis) ?>&satuan=<?= urlencode($satuan) ?>&filter_pensiun=<?= urlencode($filterPensiun) ?>&filter_jabatan=<?= urlencode($filterJabatan) ?>" class="btn btn-outline">
           📥 Ekspor CSV
         </a>
-        <button type="button" class="btn btn-outline" onclick="window.print()">🖨 Cetak</button>
+        <a href="<?= BASE_URL ?>/admin/report.php?print_all=1&jenis=<?= urlencode($jenis) ?>&satuan=<?= urlencode($satuan) ?>&filter_pensiun=<?= urlencode($filterPensiun) ?>&filter_jabatan=<?= urlencode($filterJabatan) ?>" class="btn btn-outline" target="_blank">
+          🖨 Cetak Semua
+        </a>
       </div>
     </div>
   </form>
@@ -147,10 +185,10 @@ include __DIR__ . '/../includes/header.php';
   <table>
     <thead><tr><th>No</th><th>NRP</th><th>Nama Lengkap</th><th>Pangkat</th><th>Satuan</th><th>Terisi</th><th>Persentase</th></tr></thead>
     <tbody>
-      <?php if (empty($rows)): ?>
+      <?php if (empty($displayRows)): ?>
         <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:14px;">Tidak ada data personel yang cocok.</td></tr>
       <?php endif; ?>
-      <?php $no=1; foreach ($rows as $r): ?>
+      <?php $no = $isPrintAll ? 1 : ($offset + 1); foreach ($displayRows as $r): ?>
       <tr>
         <td><?= $no++ ?></td>
         <td style="font-family:monospace;"><?= htmlspecialchars($r['p']['nrp']) ?></td>
@@ -168,10 +206,10 @@ include __DIR__ . '/../includes/header.php';
   <table>
     <thead><tr><th>No</th><th>NRP</th><th>Nama Lengkap</th><th>Golongan</th><th>Tgl Lahir</th><th>Proyeksi Pensiun</th><th>Sisa Waktu</th></tr></thead>
     <tbody>
-      <?php if (empty($rows)): ?>
+      <?php if (empty($displayRows)): ?>
         <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:14px;">Tidak ada personel yang memenuhi kriteria pensiun ini.</td></tr>
       <?php endif; ?>
-      <?php $no=1; foreach ($rows as $r): ?>
+      <?php $no = $isPrintAll ? 1 : ($offset + 1); foreach ($displayRows as $r): ?>
       <tr>
         <td><?= $no++ ?></td>
         <td style="font-family:monospace;"><?= htmlspecialchars($r['p']['nrp']) ?></td>
@@ -197,10 +235,10 @@ include __DIR__ . '/../includes/header.php';
   <table>
     <thead><tr><th>No</th><th>NRP</th><th>Nama Lengkap</th><th>Jabatan</th><th>TMT Jabatan</th><th>Lama Menjabat</th><th>Status Evaluasi</th></tr></thead>
     <tbody>
-      <?php if (empty($rows)): ?>
+      <?php if (empty($displayRows)): ?>
         <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:14px;">Tidak ada personel yang memenuhi kriteria lama jabatan ini.</td></tr>
       <?php endif; ?>
-      <?php $no=1; foreach ($rows as $r): 
+      <?php $no = $isPrintAll ? 1 : ($offset + 1); foreach ($displayRows as $r): 
         $melebihiBatas = ($r['lamaJabatan'] ?? 0) > $batasJabatan;
       ?>
       <tr>
@@ -223,6 +261,12 @@ include __DIR__ . '/../includes/header.php';
   </table>
   <?php endif; ?>
 
+  <?php if (!$isPrintAll && $totalPages > 1): ?>
+    <div class="no-print" style="margin-top:20px;">
+      <?= render_pagination($page, $totalPages, $totalRecords, $perPage, $_GET, [10, 25, 50, 100]) ?>
+    </div>
+  <?php endif; ?>
+
   <!-- Kolom Tanda Tangan Kedinasan Resmi TNI AD -->
   <div style="margin-top:40px;display:flex;justify-content:flex-end;">
     <div style="text-align:center;min-width:260px;">
@@ -237,11 +281,24 @@ include __DIR__ . '/../includes/header.php';
 
 <style>
 @media print {
-  .sidebar, .topbar, .no-print, .footer { display: none !important; }
-  .main, .content { padding: 0 !important; }
-  body { background: #fff !important; color: #000 !important; }
-  .card { border: none !important; box-shadow: none !important; background: #fff !important; }
+  .sidebar, .topbar, .no-print, .footer, nav, form { display: none !important; }
+  .main, .content { padding: 0 !important; margin: 0 !important; }
+  body { background: #fff !important; color: #000 !important; font-size: 11pt; }
+  .card { border: none !important; box-shadow: none !important; background: #fff !important; padding: 0 !important; }
+  table { width: 100% !important; border-collapse: collapse !important; }
+  th, td { border: 1px solid #000 !important; padding: 4px 6px !important; font-size: 9pt !important; }
+  thead { background: #1F3A5F !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  a[href]:after { content: none !important; }
 }
 </style>
+
+<?php if ($isPrintAll): ?>
+<script>
+  // Mode cetak semua: auto-trigger print dialog setelah konten termuat
+  window.addEventListener('load', function () {
+    setTimeout(function () { window.print(); }, 600);
+  });
+</script>
+<?php endif; ?>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

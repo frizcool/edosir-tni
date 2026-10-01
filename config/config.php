@@ -233,10 +233,7 @@ require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/includes/functions.php';
 require_once APP_ROOT . '/includes/auth.php';
 
-// Otomatis pastikan view relasional v_personel_lengkap terpasang di database hosting
-if (isset($pdo)) {
-    ensure_v_personel_lengkap($pdo);
-}
+// View relasional v_personel_lengkap kini dipelihara via skrip migrasi/utilitas pangkalan data
 
 // Pengaturan dinamis dari database (dapat diubah Administrator di menu Pengaturan)
 $dynamicAppName = get_setting($pdo, 'app_name', 'TRISULA TNI AD');

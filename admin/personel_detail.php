@@ -51,9 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_action']) && $uA
         log_activity($pdo, $admin['id'], 'APPROVAL_USER', "User #{$uAccount['id']} (NRP {$p['nrp']}) dinonaktifkan");
         set_flash('success', 'Akun login personel berhasil dinonaktifkan.');
     } elseif ($act === 'reset_pwd') {
-        reset_user_password_to_nrp($pdo, $uAccount['id'], $p['nrp']);
-        log_activity($pdo, $admin['id'], 'RESET_PASSWORD', "Reset password user #{$uAccount['id']} ke NRP {$p['nrp']}");
-        set_flash('success', "Kata sandi akun berhasil di-reset kembali ke NRP default ({$p['nrp']}).");
+        $tempPass = reset_user_password_to_nrp($pdo, $uAccount['id'], $p['nrp']);
+        log_activity($pdo, $admin['id'], 'RESET_PASSWORD', "Reset password user #{$uAccount['id']} ke sandi sementara acak");
+        set_flash('success', "Kata sandi akun berhasil di-reset ke sandi acak sementara: <strong>" . htmlspecialchars($tempPass) . "</strong>. Pengguna wajib mengganti kata sandi ini saat pertama kali login.", true);
     }
     redirect('/admin/personel_detail.php?id=' . $id);
 }

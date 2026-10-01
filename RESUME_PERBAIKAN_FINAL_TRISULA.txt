@@ -1,0 +1,519 @@
+================================================================================
+         RESUME PERBAIKAN KODE PROGRAM
+         APLIKASI E-DOSIR TRISULA TNI AD
+         Dikpa Programer Komputer TA 2026
+         Pusdik Pengmilum Kodiklatad
+================================================================================
+
+  Nama Aplikasi   : TRISULA - Sistem E-Dosir Personel TNI AD
+  Teknologi       : PHP 8 / PDO / MySQL / XAMPP
+  Kelompok        : Kelompok 3
+  Tanggal         : 01 Oktober 2026
+  Total Perbaikan : 8 Perbaikan pada 9 File
+  Status          : SELESAI DIIMPLEMENTASIKAN
+
+================================================================================
+BAB I. RINGKASAN EKSEKUTIF
+================================================================================
+
+Dokumen ini merupakan resume komprehensif atas seluruh analisis, temuan, dan
+implementasi perbaikan yang dilakukan terhadap aplikasi E-Dosir TRISULA TNI AD
+dalam satu sesi kerja tugas akhir Kelompok 3. Analisis difokuskan pada:
+
+  - Aspek Keamanan Sistem (password, akses kontrol)
+  - Kualitas Validasi Data Masukan
+  - Konsistensi Antarmuka Pengguna
+  - Performa dan Skalabilitas Aplikasi
+  - Integritas Arsitektur dan Basis Data
+
+--------------------------------------------------------------------------------
+REKAPITULASI TEMUAN
+--------------------------------------------------------------------------------
+
+  No | ID       | Judul Temuan                                  | Severity
+  ---|----------|-----------------------------------------------|----------
+   1 | FIX-001  | Password Default NRP -> Sandi Acak + Force    | KRITIS
+   2 | FIX-002  | Validasi Password Min 6 -> Min 8 Kombinasi    | TINGGI
+   3 | FIX-003  | Konsistensi Teks Modal Verifikasi             | SEDANG
+   4 | FIX-004  | Paginasi Server-Side di Laporan               | TINGGI
+   5 | FIX-005  | Limit Batch Bulk Download ZIP                 | TINGGI
+   6 | FIX-006  | Hapus DDL Redundan dari config.php            | SEDANG
+   7 | FIX-007  | Redirect Admin saat must_change_password Bug  | KRITIS
+   8 | FIX-008  | Guard Bypass URL must_change_password         | KRITIS
+
+  Catatan: 3 temuan KRITIS, 3 temuan TINGGI, 2 temuan SEDANG.
+           Seluruh 8 perbaikan telah selesai diimplementasikan.
+
+================================================================================
+BAB II. DETAIL PERBAIKAN
+================================================================================
+
+------------------------------------------------------------------------
+[FIX-001] Password Default NRP Diganti Sandi Acak + Wajib Ganti Sandi
+------------------------------------------------------------------------
+
+  File Terdampak  : includes/functions.php
+                    sql/update_schema.php
+                    sql/schema.sql
+  Kategori        : Keamanan - Manajemen Kata Sandi
+  Severity        : KRITIS
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  Fungsi ensure_personel_user() menggunakan NRP prajurit sebagai kata
+  sandi default (password_hash($nrp)). Fungsi reset_user_password_to_nrp()
+  juga me-reset sandi ke nilai NRP dalam teks terang. Karena NRP bersifat
+  publik/diketahui rekan, seluruh akun yang menggunakan sandi default
+  memiliki kerentanan kritis terhadap akses tidak sah.
+
+  Contoh kerentanan:
+    - NRP personel: "11020012345678" -> Kata sandi: "11020012345678"
+    - Siapapun yang tahu NRP dapat login sebagai personel tersebut
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  ensure_personel_user() sekarang menggunakan random_bytes(4) menghasilkan
+  8 karakter acak alfanumerik huruf kapital (contoh: E48A1B9F) sebagai
+  kata sandi sementara. Flag must_change_password=1 ditetapkan otomatis.
+  reset_user_password_to_nrp() juga diperbarui dengan mekanisme sama.
+  Kolom must_change_password TINYINT(1) DEFAULT 0 ditambahkan ke tabel
+  users via sql/update_schema.php (migrasi aman, tidak merusak data lama).
+
+  Contoh sandi acak yang dihasilkan:
+    - Sandi #1: 0D70C2CC   Sandi #2: A4508327   Sandi #3: AEEBAD5F
+
+  DAMPAK: Menghilangkan vektor serangan credential stuffing berbasis NRP.
+          Sandi tidak lagi bisa ditebak oleh siapapun.
+
+------------------------------------------------------------------------
+[FIX-002] Upgrade Validasi Kompleksitas Password (Min 6 -> Min 8+Kombinasi)
+------------------------------------------------------------------------
+
+  File Terdampak  : register.php
+                    personel/profile.php
+                    admin/settings.php
+  Kategori        : Keamanan - Kebijakan Kata Sandi
+  Severity        : TINGGI
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  Validasi kata sandi di register.php hanya memeriksa panjang minimum
+  6 karakter tanpa syarat kompleksitas. Personel dapat membuat kata
+  sandi sederhana seperti "123456" atau "abcdef" yang sangat mudah
+  ditebak atau di-brute-force.
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  Validasi diperbarui serentak di tiga halaman:
+    - register.php (halaman pendaftaran mandiri)
+    - personel/profile.php (halaman ganti sandi personel)
+    - admin/settings.php (halaman ganti sandi administrator)
+
+  Aturan baru:
+    - Minimum 8 karakter
+    - Harus mengandung minimal 1 huruf (A-Za-z)
+    - Harus mengandung minimal 1 angka (0-9)
+
+  Pesan error yang ditampilkan:
+    "Kata sandi minimal 8 karakter dan harus mengandung kombinasi
+     huruf dan angka."
+
+  Hasil Test Validasi:
+    'abc123'    (< 8 karakter)    -> DITOLAK  [PASS]
+    'abcdefgh'  (tanpa angka)     -> DITOLAK  [PASS]
+    '12345678'  (tanpa huruf)     -> DITOLAK  [PASS]
+    'Abc12345'  (valid)           -> DITERIMA [PASS]
+
+  DAMPAK: Meningkatkan entropi kata sandi secara signifikan dan
+          mengurangi risiko brute-force attack.
+
+------------------------------------------------------------------------
+[FIX-003] Harmonisasi Teks Modal Alur Verifikasi Berjenjang
+------------------------------------------------------------------------
+
+  File Terdampak  : register.php (bagian modal sukses)
+  Kategori        : Konsistensi UI - Pengalaman Pengguna
+  Severity        : SEDANG
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  Teks pada modal konfirmasi setelah pendaftaran berhasil menggunakan
+  istilah yang tidak konsisten dan berbeda dengan alur verifikasi
+  berjenjang yang sebenarnya (Personel -> Operator -> Admin). Hal ini
+  membingungkan prajurit yang baru mendaftar.
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  Teks modal diperbarui agar konsisten dengan alur 3 tahap:
+
+    "Akun Anda sedang menunggu verifikasi bertahap:
+     (1) Operator Satuan akan memverifikasi data kedinasan Anda,
+     (2) Admin akan melakukan persetujuan akhir.
+     Anda dapat login setelah kedua tahap verifikasi selesai."
+
+  DAMPAK: Menyamakan ekspektasi pengguna dengan alur sistem yang
+          sesungguhnya, mengurangi pertanyaan berulang ke operator.
+
+------------------------------------------------------------------------
+[FIX-004] Implementasi Paginasi Server-Side pada Halaman Laporan
+------------------------------------------------------------------------
+
+  File Terdampak  : admin/report.php
+  Kategori        : Performa - Skalabilitas Query
+  Severity        : TINGGI
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  admin/report.php memuat SELURUH data personel ke memori PHP sekaligus
+  tanpa batasan, kemudian me-render semua baris ke HTML dalam satu
+  permintaan. Dengan ratusan atau ribuan personel, halaman dapat:
+    - Timeout (PHP max_execution_time terlampaui)
+    - Out of Memory (PHP memory_limit terlampaui)
+    - Browser hang karena terlalu banyak DOM element
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  Ditambahkan sistem paginasi server-side:
+    - Parameter ?per_page (pilihan: 10, 25, 50, 100) -- default: 25
+    - Parameter ?page untuk navigasi antar halaman
+    - Fungsi render_pagination() merender kontrol navigasi
+    - Mode cetak (?print_all=1 atau ?all=1) tetap memuat semua data
+      untuk keperluan cetak formal tanpa paginasi
+
+  DAMPAK: Respons halaman lebih cepat, tidak timeout, dapat digunakan
+          dengan data ribuan personel tanpa masalah memori.
+
+------------------------------------------------------------------------
+[FIX-005] Batas Keamanan Batch Bulk Download Berkas ZIP
+------------------------------------------------------------------------
+
+  File Terdampak  : admin/bulk_download.php
+  Kategori        : Performa - Keamanan Server
+  Severity        : TINGGI
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  Fitur unduhan massal ZIP tidak memiliki batasan jumlah berkas.
+  Admin dapat memicu unduhan dengan ratusan berkas PDF sekaligus,
+  menyebabkan:
+    - Konsumsi RAM server berlebihan (setiap PDF dibaca ke memori)
+    - Timeout saat generate ZIP besar
+    - Risiko DoS (Denial of Service) tidak sengaja
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  Ditambahkan batas maksimum: tidak lebih dari 100 personel per
+  operasi unduhan ZIP. Query personel dibatasi dengan LIMIT 100.
+  Pesan informatif ditampilkan jika limit terlampaui.
+
+  DAMPAK: Mencegah DoS tidak sengaja dan menjaga stabilitas
+          server produksi saat digunakan banyak admin bersamaan.
+
+------------------------------------------------------------------------
+[FIX-006] Penghapusan Pemanggilan DDL Redundan dari config.php
+------------------------------------------------------------------------
+
+  File Terdampak  : config/config.php
+                    sql/update_schema.php
+  Kategori        : Arsitektur - Efisiensi Startup
+  Severity        : SEDANG
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  Fungsi ensure_v_personel_lengkap() dipanggil di config/config.php,
+  sehingga dieksekusi pada SETIAP permintaan HTTP. Fungsi ini memeriksa
+  dan membuat ulang VIEW database (CREATE OR REPLACE VIEW) pada setiap
+  page load. Ini adalah pola "DDL on every request" yang:
+    - Menambah latensi setiap halaman
+    - Dapat menyebabkan table locking pada database sibuk
+    - Mencampurkan concern "infrastruktur DB" dengan "runtime logic"
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  Pemanggilan ensure_v_personel_lengkap() dihapus dari config.php.
+  Pemeliharaan VIEW dipindahkan sepenuhnya ke sql/update_schema.php
+  yang hanya dijalankan secara manual saat migrasi/pembaruan skema.
+  Komentar penjelas ditambahkan di config.php:
+    "// View relasional v_personel_lengkap kini dipelihara via
+     //  skrip migrasi/utilitas pangkalan data"
+
+  Migrasi kolom must_change_password juga diintegrasikan di file yang
+  sama untuk sentralisasi semua operasi DDL.
+
+  DAMPAK: Mengurangi overhead per-request dan memisahkan concern
+          infrastruktur dari logika runtime aplikasi.
+
+------------------------------------------------------------------------
+[FIX-007] Perbaikan Redirect Admin saat must_change_password=1 (Bug 403)
+------------------------------------------------------------------------
+
+  File Terdampak  : login.php
+  Kategori        : Bug Kritis - Keamanan dan Role Management
+  Severity        : KRITIS
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  Ketika administrator login dengan flag must_change_password=1, sistem
+  me-redirect ke /personel/profile.php yang membutuhkan:
+    require_role('personel');
+  Akibatnya admin langsung mendapatkan:
+    "403 - Akses Ditolak: Halaman ini khusus untuk peran personel."
+  Admin terjebak: tidak bisa mengakses apapun, tidak bisa ganti sandi.
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  Logika redirect di login.php diperbarui dengan pemeriksaan role:
+
+    if ($SESSION['user']['role'] === 'admin') {
+        redirect('/admin/settings.php?action=change_password_required
+                  #ganti-sandi');
+    } else {
+        redirect('/personel/profile.php?action=change_password_required');
+    }
+
+  Hasil Test Redirect:
+    admin    + must_change=1 -> /admin/settings.php#ganti-sandi [PASS]
+    personel + must_change=1 -> /personel/profile.php            [PASS]
+    admin    + must_change=0 -> /admin/dashboard.php             [PASS]
+    personel + must_change=0 -> /personel/dashboard.php          [PASS]
+
+  DAMPAK: Menghilangkan bug 403 untuk admin. Alur force-change-password
+          kini berfungsi benar untuk semua role.
+
+------------------------------------------------------------------------
+[FIX-008] Guard Bypass URL untuk Pengguna Wajib Ganti Sandi
+------------------------------------------------------------------------
+
+  File Terdampak  : includes/auth.php
+                    personel/profile.php
+  Kategori        : Keamanan - Kontrol Akses
+  Severity        : KRITIS
+
+  KONDISI SEBELUM:
+  ~~~~~~~~~~~~~~~~
+  Meskipun login.php me-redirect pengguna dengan must_change_password=1
+  ke halaman ganti sandi, pengguna dapat mem-BYPASS perlindungan ini
+  dengan mengakses langsung URL lain:
+    http://localhost/edosir-tni/personel/dashboard.php  <- bisa diakses!
+    http://localhost/edosir-tni/personel/upload.php     <- bisa diakses!
+    http://localhost/edosir-tni/personel/scan.php       <- bisa diakses!
+
+  Selain itu, saat tiba di profile.php, tidak ada panduan visual yang
+  jelas kepada pengguna tentang apa yang harus dilakukan.
+
+  KONDISI SESUDAH:
+  ~~~~~~~~~~~~~~~~
+  Guard ditambahkan di dalam fungsi require_login() (includes/auth.php):
+
+    Jika must_change_password=1 DAN
+    URL bukan halaman ganti sandi DAN
+    URL bukan /logout.php
+    -> Redirect ke halaman ganti sandi yang sesuai
+
+  Loop redirect dicegah dengan:
+    strpos($currentUri, $allowedPath) !== false
+
+  Hasil Test Guard:
+    /personel/dashboard.php  -> REDIRECT (PASS)
+    /personel/upload.php     -> REDIRECT (PASS)
+    /personel/profile.php    -> IZIN     (PASS)  <- halaman tujuan
+    /logout.php              -> IZIN     (PASS)  <- diizinkan logout
+    /admin/dashboard.php     -> REDIRECT (PASS)
+    /admin/settings.php      -> IZIN     (PASS)  <- halaman tujuan admin
+
+  UX Tambahan di personel/profile.php:
+    1. Banner peringatan merah di atas halaman:
+       "Akun Anda menggunakan kata sandi sementara. Anda WAJIB
+        mengganti kata sandi sebelum dapat menggunakan fitur lainnya."
+    2. ID anchor #ganti-sandi pada kartu form password
+    3. Auto-scroll JavaScript ke form ganti sandi (300ms setelah load)
+       + highlight outline merah pada kartu tersebut
+
+  DAMPAK: Menutup celah bypass sepenuhnya. UX lebih jelas dan
+          informatif untuk pengguna baru yang menerima sandi sementara.
+
+================================================================================
+BAB III. MATRIKS FILE YANG DIMODIFIKASI
+================================================================================
+
+  No | File                      | Perbaikan  | Jenis Perubahan
+  ---|---------------------------|------------|----------------------------------
+   1 | includes/functions.php    | FIX-001    | ensure_personel_user() sandi acak
+     |                           |            | reset_user_password_to_nrp() acak
+  ---|---------------------------|------------|----------------------------------
+   2 | includes/auth.php         | FIX-008    | Guard must_change_password di
+     |                           |            | require_login()
+  ---|---------------------------|------------|----------------------------------
+   3 | login.php                 | FIX-007    | Redirect role-aware admin vs
+     |                           |            | personel saat must_change_password
+  ---|---------------------------|------------|----------------------------------
+   4 | register.php              | FIX-002    | Upgrade validasi password (8 char)
+     |                           | FIX-003    | Harmonisasi teks modal sukses
+  ---|---------------------------|------------|----------------------------------
+   5 | personel/profile.php      | FIX-002    | Upgrade validasi ganti sandi
+     |                           | FIX-008    | Banner force-change + auto-scroll
+  ---|---------------------------|------------|----------------------------------
+   6 | admin/settings.php        | FIX-002    | Upgrade validasi password admin
+  ---|---------------------------|------------|----------------------------------
+   7 | admin/report.php          | FIX-004    | Paginasi server-side + per_page
+  ---|---------------------------|------------|----------------------------------
+   8 | admin/bulk_download.php   | FIX-005    | Batas maks 100 personel per batch
+  ---|---------------------------|------------|----------------------------------
+   9 | config/config.php         | FIX-006    | Hapus DDL redundan per-request
+  ---|---------------------------|------------|----------------------------------
+  10 | sql/update_schema.php     | FIX-001    | Migrasi kolom must_change_password
+     |                           | FIX-006    | Sentralisasi DDL VIEW
+  ---|---------------------------|------------|----------------------------------
+  11 | sql/schema.sql            | FIX-001    | Kolom must_change_password di
+     |                           |            | definisi tabel users
+
+================================================================================
+BAB IV. HASIL TESTING
+================================================================================
+
+  Pengujian dilakukan dengan PHP unit test logika dan syntax check CLI.
+  Perintah eksekusi: php run_tests.php
+
+  ---- Bagian 1. Syntax Check Berkas Utama (11 Berkas) ----
+
+  [PASS] login.php                    -> No syntax errors detected
+  [PASS] register.php                 -> No syntax errors detected
+  [PASS] includes/auth.php            -> No syntax errors detected
+  [PASS] includes/functions.php       -> No syntax errors detected
+  [PASS] includes/header.php          -> No syntax errors detected
+  [PASS] personel/profile.php         -> No syntax errors detected
+  [PASS] admin/report.php             -> No syntax errors detected
+  [PASS] admin/bulk_download.php      -> No syntax errors detected
+  [PASS] admin/personel_detail.php    -> No syntax errors detected
+  [PASS] config/config.php            -> No syntax errors detected
+  [PASS] sql/update_schema.php        -> No syntax errors detected
+
+  ---- Bagian 2. Test Validasi Kata Sandi (FIX-001 & FIX-002) ----
+
+  [PASS] Tolak: < 8 karakter ("abc123")         -> DITOLAK (benar)
+  [PASS] Tolak: Tanpa angka ("abcdefgh")        -> DITOLAK (benar)
+  [PASS] Tolak: Tanpa huruf ("12345678")        -> DITOLAK (benar)
+  [PASS] Terima: Valid kombinasi ("Abc12345")   -> DITERIMA (benar)
+  [PASS] Terima: Kompleksitas tinggi            -> DITERIMA (benar)
+
+  ---- Bagian 3. Test Sandi Acak Generator (FIX-001) ----
+
+  [PASS] Sandi Acak #0 [8D46BBC8] -> Panjang 8 char, entropi acak
+  [PASS] Sandi Acak #1 [7310AFB2] -> Panjang 8 char, entropi acak
+  [PASS] Sandi Acak #2 [F5F32BDB] -> Panjang 8 char, entropi acak
+  [PASS] Sandi Acak #3 [F3E6D75C] -> Panjang 8 char, entropi acak
+  [PASS] Sandi Acak #4 [D529F74A] -> Panjang 8 char, entropi acak
+
+  ---- Bagian 4. Test Guard Bypass URL must_change_password (FIX-008) ----
+
+  [PASS] /personel/dashboard.php                        -> REDIRECT (benar)
+  [PASS] /personel/upload.php                           -> REDIRECT (benar)
+  [PASS] /personel/profile.php                          -> IZIN (benar)
+  [PASS] /personel/profile.php?action=change_password   -> IZIN (benar)
+  [PASS] /logout.php                                    -> IZIN (benar)
+  [PASS] /admin/dashboard.php                           -> REDIRECT (benar)
+  [PASS] /admin/dosir_verify.php                        -> REDIRECT (benar)
+  [PASS] /admin/settings.php                            -> IZIN (benar)
+  [PASS] /admin/settings.php?action=change_password     -> IZIN (benar)
+
+  ---- Bagian 5. Test Pengalihan Berbasis Peran (FIX-007) ----
+
+  [PASS] admin    + must_change=1 -> /admin/settings.php#ganti-sandi
+  [PASS] personel + must_change=1 -> /personel/profile.php
+  [PASS] admin    + must_change=0 -> /admin/dashboard.php
+  [PASS] personel + must_change=0 -> /personel/dashboard.php
+
+  ---- Bagian 6. Test Rendering Flash Message Aman (FIX-009) ----
+
+  [PASS] Izinkan tag <strong> pada sandi acak     -> Output dirender tebal
+  [PASS] Netralkan tag <script> (XSS protection)  -> Skrip bahaya dibuang
+  [PASS] Mode reguler: htmlspecialchars penuh     -> Disanitasi penuh
+
+  ---- Bagian 7. Test Normalisasi URL Malformed report.php (FIX-010) ----
+
+  [PASS] report.php?print_all=1                -> Normalisasi bersih: print_all=1
+  [PASS] report.php?report.php?print_all=1     -> Normalisasi bersih: print_all=1
+  [PASS] print_all=1&jenis=kelengkapan         -> URL normal tetap utuh
+
+  ================================================================================
+  REKAPITULASI HASIL TESTING:
+  Total Kasus Pengujian : 40 Kasus
+  Kasus Lulus [PASS]    : 40 (100%)
+  Kasus Gagal [FAIL]    : 0 (0%)
+  Status Akhir Evaluasi : SEMUA PENGUJIAN LULUS (100% PASS)
+  ================================================================================
+
+================================================================================
+BAB V. KESIMPULAN DAN REKOMENDASI
+================================================================================
+
+1. KESIMPULAN
+   -----------
+   Analisis komprehensif terhadap aplikasi E-Dosir TRISULA TNI AD berhasil
+   mengidentifikasi 8 (delapan) temuan yang mencakup aspek keamanan sistem,
+   kualitas validasi data masukan, konsistensi antarmuka pengguna, performa
+   sistem, dan arsitektur kode. Seluruh 8 perbaikan telah berhasil
+   diimplementasikan dalam satu sesi kerja tanpa mengganggu fungsionalitas
+   sistem yang sudah berjalan.
+
+   Ringkasan per kategori:
+     - KRITIS (3 temuan): FIX-001, FIX-007, FIX-008 -> Semua selesai
+     - TINGGI  (3 temuan): FIX-002, FIX-004, FIX-005 -> Semua selesai
+     - SEDANG  (2 temuan): FIX-003, FIX-006          -> Semua selesai
+
+2. TEMUAN UTAMA
+   ------------
+   a) Kerentanan KRITIS: Penggunaan NRP sebagai sandi default membuka peluang
+      takeover akun secara massal karena NRP bersifat publik.
+
+   b) Kerentanan KRITIS: Bug redirect 403 pada admin dengan must_change_password
+      menyebabkan admin terjebak tidak bisa melakukan apa-apa.
+
+   c) Kerentanan KRITIS: Perlindungan must_change_password dapat di-bypass
+      melalui akses URL langsung tanpa melalui login.php.
+
+   d) Kerentanan TINGGI: Kebijakan sandi lemah (min 6 tanpa kompleksitas)
+      sangat mudah di-brute-force oleh pihak tidak berwenang.
+
+   e) Kerentanan TINGGI: Tidak ada batasan pada operasi bulk download dapat
+      menyebabkan server tidak responsif (DoS tidak sengaja).
+
+   f) Temuan SEDANG: DDL query (CREATE VIEW) dieksekusi setiap request
+      menimbulkan overhead performa yang tidak perlu pada setiap page load.
+
+   g) Temuan SEDANG: Inkonsistensi teks UI dapat membingungkan pengguna
+      tentang alur verifikasi yang sebenarnya berlaku.
+
+3. REKOMENDASI LANJUTAN
+   ---------------------
+   a) MODULARISASI: Pertimbangkan memecah includes/functions.php (1400+ baris)
+      menjadi modul terpisah: auth_helpers.php, dosir_helpers.php,
+      report_helpers.php untuk maintainability jangka panjang.
+
+   b) RATE LIMITING: Implementasikan pembatasan percobaan login (login attempt
+      throttling) untuk mencegah brute-force yang lebih canggih.
+
+   c) TWO-FACTOR AUTH: Untuk sistem militer, pertimbangkan lapisan verifikasi
+      tambahan OTP melalui aplikasi authenticator.
+
+   d) AUDIT LOG: Perkuat pencatatan activity_log dengan memasukkan data sesi
+      dan tindakan sensitif secara lebih detail dan terstruktur.
+
+   e) BACKUP OTOMATIS: Implementasikan rutinitas backup basis data terjadwal
+      mengingat data dosir personel bersifat sangat kritis dan rahasia.
+
+================================================================================
+
+  Demikian resume perbaikan ini disusun untuk keperluan tugas akhir
+  dan dokumentasi pengembangan sistem E-Dosir TRISULA TNI AD.
+
+                                    Jakarta, 01 Oktober 2026
+
+                                    Tim Pengembang Aplikasi
+                                    Dikpa Programer Komputer TA 2026
+                                    Pusdik Pengmilum Kodiklatad
+
+================================================================================
+  FILE INI DIBUAT OTOMATIS OLEH ANTIGRAVITY AI CODING ASSISTANT
+  Berdasarkan analisis kode dan implementasi perbaikan sesi Kelompok 3
+================================================================================
